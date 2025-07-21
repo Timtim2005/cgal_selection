@@ -23,6 +23,8 @@
 #include <string>
 #include <CGAL/Graphics_scene.h>
 
+#include <chrono> // ADDED
+
 #ifdef __GNUC__
 #if  __GNUC__ >= 9
 #  pragma GCC diagnostic push
@@ -833,7 +835,190 @@ public:
     // drawAxis();
   }
 
+public:
+template<typename GSSelector>
+  GSSelector::face_descriptor select_face(QMouseEvent* event, GSSelector gss) // ADDED
+  {
+    //GSSelector::data_structure::Null_descriptor;
+    // THIS IS FOR FACES
+    auto start = std::chrono::high_resolution_clock::now();
+    float minPtDepth = 1.0;
+    float ptDepth;
+    CGAL::qglviewer::Vec finalV1, finalV2, finalV3;
+    CGAL::qglviewer::Vec v1, v2, v3;
+    int id = 0;
+    int finalId = 0;
+    int faceId = -1;
+    int nb_if = 0;
+
+    std::vector<BufferType> faces_buffer = m_scene.get_array_of_index(GS::POS_FACES);
+    std::vector<std::size_t> full_faces_index = m_scene.get_full_faces_index();
+    CGAL::qglviewer::Vec point(event->position().x(), event->position().y(), 0);
+
+    for(auto it = faces_buffer.begin(); it != faces_buffer.end(); it+=9, ++id)
+    {
+      v1 = this->camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2)));
+      v2 = this->camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+3), *(it+4), *(it+5)));
+      v3 = this->camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+6), *(it+7), *(it+8)));
+
+      if(!(v1.z < 0 && v2.z < 0 && v3.z < 0) && 
+        !(v1.z > minPtDepth && v2.z > minPtDepth && v3.z > minPtDepth) &&
+        !(v1.z > 1 || v2.z > 1 || v3.z > 1) &&
+        /*!(((v1.x < 0 || v1.x > this->width()) || (v1.y < 0 || v1.y > this->height())) &&
+        ((v2.x < 0 || v2.x > this->width()) || (v2.y < 0 || v2.y > this->height())) &&
+        ((v3.x < 0 || v3.x > this->width()) || (v3.y < 0 || v3.y > this->height()))) &&*/
+        pointWeightFast(point, v1, v2, v3, ptDepth) && ptDepth < minPtDepth)
+      {
+        ++nb_if;
+        faceId = full_faces_index[id];
+        finalId = id;
+        minPtDepth = ptDepth;
+        finalV1 = v1;
+        finalV2 = v2;
+        finalV3 = v3;
+      }
+    }
+
+    if(minPtDepth < 1.0)
+    {
+      std::cout << "Mouse clicked on face: " << finalId << " - Full face: " << faceId << " - Vertices: "
+                << finalV1 << ", " << finalV2 << ", " << finalV3 << std::endl;
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "Number of faces checked: " << nb_if << std::endl;
+    std::cout << "Face selection took: " << duration.count() << " ms" << std::endl;
+
+    if(faceId != -1)
+    {
+      return gss.get_face_descriptor(faceId);
+    }
+  }
+
 protected:
+  int select_edge(QMouseEvent* event) // ADDED
+  {
+    // THIS IS FOR SEGMENTS
+
+    float minAvgDepth = 1.0;
+    CGAL::qglviewer::Vec finalLineP, finalLineQ;
+    u_int id = 0;
+    u_int finalId = -1;
+
+    std::vector<BufferType> segments_buffer = m_scene.get_array_of_index(GS::POS_SEGMENTS);
+    for(auto it = segments_buffer.begin(); it != segments_buffer.end(); it+=6, ++id)
+    {
+      CGAL::qglviewer::Vec lineP = this->camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2)));
+      CGAL::qglviewer::Vec lineQ = this->camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+3), *(it+4), *(it+5)));
+      CGAL::qglviewer::Vec point(event->position().x(), event->position().y(), 0);
+      float avgDepth = (lineP.z + lineQ.z) / 2.0;
+      if(avgDepth < minAvgDepth && containsPoint(lineP, lineQ, point))
+      {
+        finalId = id;
+        minAvgDepth = avgDepth;
+        finalLineP = lineP;
+        finalLineQ = lineQ;
+      }
+    }
+    if(minAvgDepth < 1.0)
+    {
+      std::cout << "Mouse clicked on segment: " << finalId << " - " << finalLineP << " to " << finalLineQ << std::endl;
+    }
+    return finalId;
+  }
+
+  int select_vertex(QMouseEvent* event) // ADDED
+  {
+    // THIS IS FOR POINTS
+    int id = 0;
+    int finalId = -1;
+    CGAL::qglviewer::Vec finalPoint = CGAL::qglviewer::Vec(0, 0, 0);
+    CGAL::qglviewer::Vec finalVecScreen = CGAL::qglviewer::Vec(0, 0, 1);
+    std::vector<BufferType> points_buffer = m_scene.get_array_of_index(GS::POS_POINTS);
+    for(auto it = points_buffer.begin(); it != points_buffer.end(); it+=3, ++id)
+    {
+      CGAL::qglviewer::Vec point = CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2));
+      CGAL::qglviewer::Vec vecScreen = this->camera()->projectedCoordinatesOf(point);
+      if(event->position().x() > vecScreen.x - 5 && event->position().x() < vecScreen.x + 5 &&
+        event->position().y() > vecScreen.y - 5 && event->position().y() < vecScreen.y + 5 &&
+        vecScreen.z < finalVecScreen.z)
+      {
+        finalVecScreen = vecScreen;
+        finalPoint = point;
+        finalId = id;
+      }
+    }
+    if(finalVecScreen.z != 1)
+    {
+      std::cout << "Mouse at : " << event->position().x() << " " << event->position().y() << std::endl;
+      std::cout << "Point : " << finalPoint << " - On screen : " << finalVecScreen << std::endl;
+    }
+    return finalId;
+  }
+
+  bool containsPoint(CGAL::qglviewer::Vec lineP, CGAL::qglviewer::Vec lineQ, CGAL::qglviewer::Vec point) // ADDED
+  {
+    bool xBetween = ((point.x - lineP.x) * (point.x - lineQ.x) <= 1);
+    bool yBetween = ((point.y - lineP.y) * (point.y - lineQ.y) <= 1);
+    if (!xBetween || !yBetween) { // early return or can be moved to the end
+        return false;
+    }
+    float dxPQ = lineQ.x - lineP.x;
+    float dyPQ = lineQ.y - lineP.y;
+    float lineLengthSquared = dxPQ*dxPQ + dyPQ*dyPQ;
+    float crossproduct = (point.y - lineP.y) * dxPQ - (point.x - lineP.x) * dyPQ;
+    float tolerance = 1;
+    return crossproduct * crossproduct <= lineLengthSquared * tolerance * tolerance;
+  }
+
+  bool pointWeightFast(CGAL::qglviewer::Vec pt, CGAL::qglviewer::Vec v1, CGAL::qglviewer::Vec v2, CGAL::qglviewer::Vec v3, float& ptDepth)
+  {
+    // First do fast inside test using sign method
+    const float d1 = sign(pt, v1, v2);
+    const float d2 = sign(pt, v2, v3);
+    const float d3 = sign(pt, v3, v1);
+    
+    const bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+    const bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+    
+    // Quick reject if outside triangle
+    if (has_neg && has_pos) return false;
+    
+    // Only calculate precise depth if inside
+    return pointWeight(pt, v1, v2, v3, ptDepth);
+  }
+
+  bool pointWeight(CGAL::qglviewer::Vec pt, CGAL::qglviewer::Vec v1, CGAL::qglviewer::Vec v2, CGAL::qglviewer::Vec v3, float& ptDepth) // ADDED
+  {
+    float denom = (v2.y - v3.y) * (v1.x - v3.x) + (v3.x - v2.x) * (v1.y - v3.y);
+    float v1Weight = ((v2.y - v3.y) * (pt.x - v3.x) + (v3.x - v2.x) * (pt.y - v3.y)) / denom;
+    float v2Weight = ((v3.y - v1.y) * (pt.x - v3.x) + (v1.x - v3.x) * (pt.y - v3.y)) / denom;
+    float v3Weight = 1 - v1Weight - v2Weight;
+    ptDepth = v1Weight * v1.z + v2Weight * v2.z + v3Weight * v3.z;
+    return true;
+  }
+
+  float sign (CGAL::qglviewer::Vec p1, CGAL::qglviewer::Vec p2, CGAL::qglviewer::Vec p3) // ADDED
+  {
+    return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+  }
+
+  bool pointInTriangle (CGAL::qglviewer::Vec pt, CGAL::qglviewer::Vec v1, CGAL::qglviewer::Vec v2, CGAL::qglviewer::Vec v3) // ADDED
+  {
+    float d1, d2, d3;
+    bool has_neg, has_pos;
+
+    d1 = sign(pt, v1, v2);
+    d2 = sign(pt, v2, v3);
+    d3 = sign(pt, v3, v1);
+
+    has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+    has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+    return !(has_neg && has_pos);
+  }
+
   void compile_shaders()
   {
     rendering_program_face.removeAllShaders();
@@ -1131,6 +1316,7 @@ protected:
     // 1) POINT SHADER
 
     vao[VAO_POINTS].bind();
+    std::cout << "Line 1134 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_POINTS);
     colors = m_scene.get_array_of_index(GS::COLOR_POINTS);
 
@@ -1150,6 +1336,7 @@ protected:
     // 2) SEGMENT SHADER
 
     vao[VAO_SEGMENTS].bind();
+    std::cout << "Line 1154 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_SEGMENTS);
     colors = m_scene.get_array_of_index(GS::COLOR_SEGMENTS);
 
@@ -1170,6 +1357,7 @@ protected:
     // 3) RAYS SHADER
 
     vao[VAO_RAYS].bind();
+    std::cout << "Line 1175 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_RAYS);
     colors = m_scene.get_array_of_index(GS::COLOR_RAYS);
 
@@ -1187,9 +1375,11 @@ protected:
     rendering_program_p_l.enableAttributeArray("a_Color");
     rendering_program_p_l.setAttributeBuffer("a_Color",GL_FLOAT,0,3);
 
+
     // 4) LINES SHADER
 
     vao[VAO_LINES].bind();
+    std::cout << "Line 1196 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_LINES);
     colors = m_scene.get_array_of_index(GS::COLOR_LINES);
 
@@ -1207,9 +1397,11 @@ protected:
     rendering_program_p_l.enableAttributeArray("a_Color");
     rendering_program_p_l.setAttributeBuffer("a_Color",GL_FLOAT,0,3);
 
+
     // 5) FACE SHADER
 
     vao[VAO_FACES].bind();
+    std::cout << "Line 1217 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_FACES);
     normals = m_scene.get_array_of_index(
       m_flat_shading ? GS::FLAT_NORMAL_FACES : GS::SMOOTH_NORMAL_FACES
@@ -1237,6 +1429,7 @@ protected:
     rendering_program_face.enableAttributeArray("a_Color");
     rendering_program_face.setAttributeBuffer("a_Color",GL_FLOAT,0,3);
 
+
     // 6) clipping plane shader
     if (isOpenGL_4_3())
     {
@@ -1245,6 +1438,7 @@ protected:
       rendering_program_clipping_plane.bind();
 
       vao[VAO_CLIPPING_PLANE].bind();
+      std::cout << "Line 1253 : " << glGetError() << std::endl; // ADDED
       ++bufn;
       CGAL_assertion(bufn < NB_GL_BUFFERS);
       buffers[bufn].bind();
@@ -1256,6 +1450,7 @@ protected:
       buffers[bufn].release();
 
       rendering_program_clipping_plane.release();
+
     }
 
     m_are_buffers_initialized = true;
@@ -1428,7 +1623,7 @@ protected:
     glDisable(GL_BLEND);
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_LINE_SMOOTH);
-    glDisable(GL_POLYGON_SMOOTH_HINT);
+    //glDisable(GL_POLYGON_SMOOTH); // MODIFIED
     glBlendFunc(GL_ONE, GL_ZERO);
     glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
 
@@ -1529,6 +1724,12 @@ protected:
     array.push_back(0.f);
     array.push_back(0.f);
     array.push_back(1.f);
+  }
+
+  virtual void mousePressEvent(QMouseEvent *e)
+  {
+    if(!on_mouse_pressed || !on_mouse_pressed(e, this)) {}
+    CGAL::QGLViewer::mousePressEvent(e);
   }
 
   virtual void mouseDoubleClickEvent(QMouseEvent *e)
@@ -1854,6 +2055,7 @@ protected:
 
 public:
   std::function<bool(QKeyEvent *, CGAL::Qt::Basic_viewer *)> on_key_pressed;
+  std::function<bool(QMouseEvent *, CGAL::Qt::Basic_viewer *)> on_mouse_pressed;
 
 protected:
   const Graphics_scene& m_scene;

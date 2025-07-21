@@ -36,6 +36,8 @@
 
 #include <CGAL/Buffer_for_vao.h>
 
+#include <CGAL/Graphics_scene_selector.h> // ADDED
+
 namespace CGAL {
 
 //------------------------------------------------------------------------------
@@ -152,6 +154,9 @@ public:
   unsigned int number_of_elements(int index) const
   { return static_cast<unsigned int>(arrays[index].size()/3); }
 
+  const std::vector<std::size_t> &get_full_faces_index() const // ADDED
+  { return m_full_faces_index; } // ADDED
+
   void initiate_bounding_box(const CGAL::Bbox_3& new_bounding_box)
   { m_bounding_box = new_bounding_box; }
 
@@ -180,21 +185,43 @@ public:
     m_buffer_for_faces.negate_normals();
   }
 
-  template <typename KPoint> void add_point(const KPoint &p)
-  { m_buffer_for_points.add_point(p, m_default_color_point); }
+  template <typename KPoint, class GSSelector, typename vertex_descriptor>
+  void add_point(const KPoint &p, GSSelector *gss = nullptr,
+                 vertex_descriptor vd = {})
+  {
+    m_buffer_for_points.add_point(p, m_default_color_point);
 
-  template <typename KPoint>
-  void add_point(const KPoint &p, const CGAL::IO::Color &acolor)
-  { m_buffer_for_points.add_point(p, acolor); }
+    GSS_push<GSSelector, vertex_descriptor>::run(gss, vd);
+  }
 
-  template <typename KPoint>
-  void add_segment(const KPoint &p1, const KPoint &p2)
-  { m_buffer_for_segments.add_segment(p1, p2, m_default_color_segment); }
+  template <typename KPoint, class GSSelector, typename vertex_descriptor>
+  void add_point(const KPoint &p, const CGAL::IO::Color &acolor,
+                 GSSelector *gss = nullptr,
+                 vertex_descriptor vd = {})
+  {
+    m_buffer_for_points.add_point(p, acolor);
 
-  template <typename KPoint>
+    GSS_push<GSSelector, vertex_descriptor>::run(gss, vd);
+  }
+
+  template <typename KPoint, class GSSelector, typename edge_descriptor>
+  void add_segment(const KPoint &p1, const KPoint &p2, GSSelector *gss = nullptr, 
+                   edge_descriptor ed = {})
+  {
+    m_buffer_for_segments.add_segment(p1, p2, m_default_color_segment);
+
+    GSS_push<GSSelector, edge_descriptor>::run(gss, ed);
+  }
+
+  template <typename KPoint, class GSSelector, typename edge_descriptor>
   void add_segment(const KPoint &p1, const KPoint &p2,
-                   const CGAL::IO::Color &acolor)
-  { m_buffer_for_segments.add_segment(p1, p2, acolor); }
+                   const CGAL::IO::Color &acolor, GSSelector *gss = nullptr,
+                   edge_descriptor ed = {})
+  {
+    m_buffer_for_segments.add_segment(p1, p2, acolor);
+
+    GSS_push<GSSelector, edge_descriptor>::run(gss, ed);
+  }
 
   template <typename KPoint, typename KVector>
   void add_ray(const KPoint &p, const KVector &v)
@@ -272,10 +299,24 @@ public:
     { m_buffer_for_faces.face_begin(acolor); }
   }
 
-  void face_end()
+  template<typename GSSelector, typename face_descriptor>
+  void face_end(GSSelector* gss = nullptr, face_descriptor fd = {})
   {
     if (m_buffer_for_faces.is_a_face_started())
-    { m_buffer_for_faces.face_end(); }
+    {
+      std::size_t nb_triangles_before = arrays[POS_FACES].size() / 9; // ADDED
+      m_buffer_for_faces.face_end(); 
+      std::size_t nb_triangles_after = arrays[POS_FACES].size() / 9; // ADDED
+      std::size_t nb_triangles_added = nb_triangles_after - nb_triangles_before; // ADDED
+      
+      for(std::size_t i = 0; i < nb_triangles_added; ++i) // ADDED
+      {
+        m_full_faces_index.push_back(m_full_faces_number); // ADDED
+      }
+      ++m_full_faces_number; // ADDED
+
+      GSS_push<GSSelector, face_descriptor>::run(gss, fd);
+    }
   }
 
   template <typename KPoint>
@@ -339,6 +380,8 @@ public:
     m_buffer_for_lines.clear();
     m_buffer_for_faces.clear();
     m_texts.clear();
+    m_full_faces_index.clear(); // ADDED
+    m_full_faces_number = 0; // ADDED
     m_bounding_box=CGAL::Bbox_3();
   }
 
@@ -396,6 +439,9 @@ protected:
   Buffer_for_vao m_buffer_for_rays;
   Buffer_for_vao m_buffer_for_lines;
   Buffer_for_vao m_buffer_for_faces;
+
+  std::vector<std::size_t> m_full_faces_index; // ADDED
+  std::size_t m_full_faces_number = 0; // ADDED
 
   CGAL::IO::Color m_default_color_face;
   CGAL::IO::Color m_default_color_point;

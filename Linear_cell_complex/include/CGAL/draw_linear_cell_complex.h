@@ -16,6 +16,7 @@
 #include <CGAL/Basic_viewer.h>
 #include <CGAL/Graphics_scene.h>
 #include <CGAL/Graphics_scene_options.h>
+#include <CGAL/Graphics_scene_selector.h>
 #include <CGAL/Linear_cell_complex_base.h>
 #include <CGAL/Linear_cell_complex_operations.h>
 #include <CGAL/Random.h>
@@ -57,12 +58,13 @@ struct LCC_geom_utils<LCC, Local_kernel, 2>
   }
 };
 
-template <class LCC, class GSOptionsLCC>
+template <class LCC, class GSOptionsLCC, class GSSelector>
 void compute_face(const LCC& lcc,
                   typename LCC::Dart_const_handle dh,
                   typename LCC::Dart_const_handle voldh,
                   CGAL::Graphics_scene& graphics_scene,
-                  const GSOptionsLCC& gso)
+                  const GSOptionsLCC& gso,
+                  GSSelector* gss = nullptr) // ADDED
 {
   if(!gso.are_faces_enabled() || !gso.draw_face(lcc, dh))
   { return; }
@@ -94,14 +96,15 @@ void compute_face(const LCC& lcc,
   }
   while (cur!=dh);
 
-  graphics_scene.face_end();
+  graphics_scene.face_end(gss, cur); // MODIFIED
 }
 
-template <class LCC, class GSOptions>
+template <class LCC, class GSOptions, class GSSelector>
 void compute_edge(const LCC& lcc,
                   typename LCC::Dart_const_handle dh,
                   CGAL::Graphics_scene& graphics_scene,
-                  const GSOptions& gso)
+                  const GSOptions& gso,
+                  GSSelector* gss = nullptr) // ADDED
 {
   if(!gso.are_edges_enabled() || !gso.draw_edge(lcc, dh))
   { return; }
@@ -113,18 +116,20 @@ void compute_edge(const LCC& lcc,
     if (gso.colored_edge(lcc, dh))
     {
       graphics_scene.add_segment(p1, lcc.point(d2),
-                                 gso.edge_color(lcc, dh));
+                                 gso.edge_color(lcc, dh), gss, dh);
     }
     else
-    { graphics_scene.add_segment(p1, lcc.point(d2)); }
+    { graphics_scene.add_segment(p1, lcc.point(d2), gss, dh); }
+    
   }
 }
 
-template <class LCC, class GSOptionsLCC>
+template <class LCC, class GSOptionsLCC, class GSSelector>
 void compute_vertex(const LCC& lcc,
                     typename LCC::Dart_const_handle dh,
                     CGAL::Graphics_scene& graphics_scene,
-                    const GSOptionsLCC& gso)
+                    const GSOptionsLCC& gso,
+                    GSSelector* gss = nullptr) // ADDED
 {
   if (!gso.are_vertices_enabled() || !gso.draw_vertex(lcc, dh))
   { return; }
@@ -132,10 +137,10 @@ void compute_vertex(const LCC& lcc,
   if (gso.colored_vertex(lcc, dh))
   {
     graphics_scene.add_point(lcc.point(dh),
-                             gso.vertex_color(lcc, dh));
+                             gso.vertex_color(lcc, dh), gss, dh);
   }
   else
-  { graphics_scene.add_point(lcc.point(dh)); }
+  { graphics_scene.add_point(lcc.point(dh), gss, dh); }
 }
 
 template<class LCC, unsigned int d=LCC::dimension>
@@ -158,10 +163,11 @@ struct Test_opposite_draw_lcc<LCC, 2>
 };
 
 
-template <class LCC, class GSOptions>
+template <class LCC, class GSOptions, class GSSelector>
 void compute_elements(const LCC& lcc,
                       CGAL::Graphics_scene& graphics_scene,
-                      const GSOptions& gso)
+                      const GSOptions& gso,
+                      GSSelector* gss = nullptr) // ADDED
 {
   typename LCC::size_type markvolumes = lcc.get_new_mark();
   typename LCC::size_type markfaces = lcc.get_new_mark();
@@ -190,7 +196,7 @@ void compute_elements(const LCC& lcc,
           if ((!gso.volume_wireframe(lcc, itv) ||
                Test_opposite_draw_lcc<LCC>::run(lcc, gso, itv)) &&
               !gso.face_wireframe(lcc, itv))
-          { compute_face(lcc, itv, it, graphics_scene, gso); }
+          { compute_face(lcc, itv, it, graphics_scene, gso, gss); }  // MODIFIED
           for(typename LCC::template Dart_of_cell_basic_range<2>::const_iterator
                 itf=lcc.template darts_of_cell_basic<2>(itv, markfaces).begin(),
                 itfend=lcc.template darts_of_cell_basic<2>(itv, markfaces).end();
@@ -200,7 +206,7 @@ void compute_elements(const LCC& lcc,
             if (!lcc.is_marked(itf, markedges) &&
                 gso.draw_edge(lcc, itf))
             {
-              compute_edge(lcc, itf, graphics_scene, gso);
+              compute_edge(lcc, itf, graphics_scene, gso, gss); // MODIFIED
               for(typename LCC::template Dart_of_cell_basic_range<1>::const_iterator
                     ite=lcc.template darts_of_cell_basic<1>(itf, markedges).begin(),
                     iteend=lcc.template darts_of_cell_basic<1>(itf, markedges).end();
@@ -210,7 +216,7 @@ void compute_elements(const LCC& lcc,
                 if (!lcc.is_marked(ite, markvertices) &&
                     gso.draw_vertex(lcc, ite))
                 {
-                  compute_vertex(lcc, ite, graphics_scene, gso);
+                  compute_vertex(lcc, ite, graphics_scene, gso, gss); // MODIFIED
                   CGAL::mark_cell<LCC, 0>(lcc, ite, markvertices);
                 }
               }
@@ -244,9 +250,7 @@ void compute_elements(const LCC& lcc,
   CGAL::Linear_cell_complex_base<d_, ambient_dim, Traits_, Items_, Alloc_,     \
                                  Map, Refs, Storage_>
 
-// add_to_graphics_scene: to add a LCC in the given graphic buffer, with a
-// graphics scene options.
-template<unsigned int d_, unsigned int ambient_dim, class Traits_,
+/*template<unsigned int d_, unsigned int ambient_dim, class Traits_,
          class Items_, class Alloc_,
          template <unsigned int, class, class, class, class> class Map,
          class Refs, class Storage_,
@@ -255,8 +259,31 @@ void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
                            CGAL::Graphics_scene& graphics_scene,
                            const GSOptions& gso)
 {
+  struct NullSelector {
+    using vertex_descriptor = typename CGAL_LCC_TYPE::Dart_const_handle;
+    using edge_descriptor = typename CGAL_LCC_TYPE::Dart_const_handle;
+    using face_descriptor = typename CGAL_LCC_TYPE::Dart_const_handle;
+    void add_vertex(vertex_descriptor) {}
+    void add_edge(edge_descriptor) {}
+    void add_face(face_descriptor) {}
+  };
+  add_to_graphics_scene(alcc, graphics_scene, gso, static_cast<NullSelector*>(nullptr));
+}*/
+
+// add_to_graphics_scene: to add a LCC in the given graphic buffer, with a
+// graphics scene options.
+template<unsigned int d_, unsigned int ambient_dim, class Traits_,
+         class Items_, class Alloc_,
+         template <unsigned int, class, class, class, class> class Map,
+         class Refs, class Storage_,
+         class GSOptions, class GSSelector=void>
+void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gso,
+                           GSSelector* gss = nullptr) // ADDED
+{
   draw_function_for_lcc::compute_elements(static_cast<const Refs&>(alcc),
-                                          graphics_scene, gso);
+                                          graphics_scene, gso, gss);
 }
 
 // add_to_graphics_scene: to add a LCC in the given graphic buffer, without a
@@ -264,9 +291,11 @@ void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
 template<unsigned int d_, unsigned int ambient_dim, class Traits_,
          class Items_, class Alloc_,
          template <unsigned int, class, class, class, class> class Map,
-         class Refs, class Storage_>
+         class Refs, class Storage_,
+         class GSSelector=void>
 void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
-                           CGAL::Graphics_scene& graphics_scene)
+                           CGAL::Graphics_scene& graphics_scene,
+                           GSSelector* gss = nullptr) // ADDED
 {
   CGAL::Graphics_scene_options<CGAL_LCC_TYPE,
                                typename CGAL_LCC_TYPE::Dart_const_handle,
@@ -286,7 +315,7 @@ void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
     return get_random_color(random);
   };
 
-  add_to_graphics_scene(alcc, graphics_scene, gso);
+  add_to_graphics_scene(alcc, graphics_scene, gso, gss); // MODIFIED
 }
 
 // Specialization of draw function for a LCC, with a drawing graphics scene options.

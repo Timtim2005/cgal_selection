@@ -907,6 +907,7 @@ protected:
   std::vector<std::size_t> m_indices_of_points_of_face;
   CGAL::IO::Color m_color_of_face;
   Local_vector m_normal_of_face;
+
 };
 
 } // End namespace CGAL
