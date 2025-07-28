@@ -78,7 +78,7 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
     m_faces_index.clear();
   }
 
-  protected:
+protected:
   void add_vertex(vertex_descriptor vd)
   {
     m_vertices_index.push_back(vd);
@@ -101,18 +101,9 @@ protected:
 };
 
 template<class GSSelector, class descriptor>
-struct GSS_push;
-
-template<class descriptor>
-struct GSS_push<void, descriptor>
-{
-  static void run(void*, const descriptor&) {}
-};
-
-template<class GSSelector, class descriptor>
 struct GSS_push
 {
-  static void run(GSSelector* gss, const descriptor& desc)
+  static void run(GSSelector* gss, const descriptor desc)
   {
     if(gss != nullptr && std::is_same<descriptor, typename GSSelector::face_descriptor>::value)
     {

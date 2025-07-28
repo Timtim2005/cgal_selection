@@ -186,41 +186,60 @@ public:
   }
 
   template <typename KPoint, class GSSelector, typename vertex_descriptor>
-  void add_point(const KPoint &p, GSSelector *gss = nullptr,
-                 vertex_descriptor vd = {})
+  void add_point(const KPoint &p, GSSelector *gss, vertex_descriptor vd)
   {
     m_buffer_for_points.add_point(p, m_default_color_point);
-
     GSS_push<GSSelector, vertex_descriptor>::run(gss, vd);
   }
 
   template <typename KPoint, class GSSelector, typename vertex_descriptor>
-  void add_point(const KPoint &p, const CGAL::IO::Color &acolor,
-                 GSSelector *gss = nullptr,
-                 vertex_descriptor vd = {})
+  void add_point(const KPoint &p, const CGAL::IO::Color &acolor, 
+                 GSSelector *gss, vertex_descriptor vd)
   {
     m_buffer_for_points.add_point(p, acolor);
-
     GSS_push<GSSelector, vertex_descriptor>::run(gss, vd);
   }
 
+  template <typename KPoint>
+  void add_point(const KPoint &p)
+  {
+    m_buffer_for_points.add_point(p, m_default_color_point);
+  }
+
+  template <typename KPoint>
+  void add_point(const KPoint &p, const CGAL::IO::Color &acolor)
+  {
+    m_buffer_for_points.add_point(p, acolor);
+  }
+
   template <typename KPoint, class GSSelector, typename edge_descriptor>
-  void add_segment(const KPoint &p1, const KPoint &p2, GSSelector *gss = nullptr, 
-                   edge_descriptor ed = {})
+  void add_segment(const KPoint &p1, const KPoint &p2, GSSelector *gss, 
+                   edge_descriptor ed)
   {
     m_buffer_for_segments.add_segment(p1, p2, m_default_color_segment);
-
     GSS_push<GSSelector, edge_descriptor>::run(gss, ed);
   }
 
   template <typename KPoint, class GSSelector, typename edge_descriptor>
   void add_segment(const KPoint &p1, const KPoint &p2,
-                   const CGAL::IO::Color &acolor, GSSelector *gss = nullptr,
-                   edge_descriptor ed = {})
+                   const CGAL::IO::Color &acolor, GSSelector *gss,
+                   edge_descriptor ed)
   {
     m_buffer_for_segments.add_segment(p1, p2, acolor);
-
     GSS_push<GSSelector, edge_descriptor>::run(gss, ed);
+  }
+
+  template <typename KPoint>
+  void add_segment(const KPoint &p1, const KPoint &p2)
+  {
+    m_buffer_for_segments.add_segment(p1, p2, m_default_color_segment);
+  }
+
+  template <typename KPoint>
+  void add_segment(const KPoint &p1, const KPoint &p2,
+                   const CGAL::IO::Color &acolor)
+  {
+    m_buffer_for_segments.add_segment(p1, p2, acolor);
   }
 
   template <typename KPoint, typename KVector>
@@ -297,6 +316,23 @@ public:
     }
     else
     { m_buffer_for_faces.face_begin(acolor); }
+  }
+
+  void face_end()
+  {
+    if (m_buffer_for_faces.is_a_face_started())
+    {
+      std::size_t nb_triangles_before = arrays[POS_FACES].size() / 9; // ADDED
+      m_buffer_for_faces.face_end(); 
+      std::size_t nb_triangles_after = arrays[POS_FACES].size() / 9; // ADDED
+      std::size_t nb_triangles_added = nb_triangles_after - nb_triangles_before; // ADDED
+      
+      for(std::size_t i = 0; i < nb_triangles_added; ++i) // ADDED
+      {
+        m_full_faces_index.push_back(m_full_faces_number); // ADDED
+      }
+      ++m_full_faces_number; // ADDED
+    }
   }
 
   template<typename GSSelector, typename face_descriptor>
