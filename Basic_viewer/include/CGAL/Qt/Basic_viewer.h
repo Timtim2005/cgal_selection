@@ -882,10 +882,11 @@ template<typename GSSelector>
 
       for(auto it = faces_buffer.begin(); it != faces_buffer.end(); it+=9, ++id)
       {
+        std::cout << "Checking face " << full_faces_index[id] << std::endl;
         // Use precomputed matrix for projection
-        v1 = projectPoint(CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2)), matrix, viewport);
-        v2 = projectPoint(CGAL::qglviewer::Vec(*(it+3), *(it+4), *(it+5)), matrix, viewport);
-        v3 = projectPoint(CGAL::qglviewer::Vec(*(it+6), *(it+7), *(it+8)), matrix, viewport);
+        v1 = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2)));
+        v2 = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+3), *(it+4), *(it+5)));
+        v3 = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+6), *(it+7), *(it+8)));
 
         if(!(v1.z < 0 && v2.z < 0 && v3.z < 0) && 
           !(v1.z > minPtDepth && v2.z > minPtDepth && v3.z > minPtDepth) &&
@@ -912,6 +913,7 @@ template<typename GSSelector>
 
       if(faceId != -1)
       {
+        std::cout << "Selected face ID: " << faceId << std::endl;
         return gss.get_face_descriptor(faceId);
       }
     }

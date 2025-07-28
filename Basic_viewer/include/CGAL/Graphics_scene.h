@@ -189,7 +189,7 @@ public:
   void add_point(const KPoint &p, GSSelector *gss, vertex_descriptor vd)
   {
     m_buffer_for_points.add_point(p, m_default_color_point);
-    GSS_push<GSSelector, vertex_descriptor>::run(gss, vd);
+    GSS_push<GSSelector, vertex_descriptor>::add_vertex(gss, vd);
   }
 
   template <typename KPoint, class GSSelector, typename vertex_descriptor>
@@ -197,7 +197,7 @@ public:
                  GSSelector *gss, vertex_descriptor vd)
   {
     m_buffer_for_points.add_point(p, acolor);
-    GSS_push<GSSelector, vertex_descriptor>::run(gss, vd);
+    GSS_push<GSSelector, vertex_descriptor>::add_vertex(gss, vd);
   }
 
   template <typename KPoint>
@@ -217,7 +217,7 @@ public:
                    edge_descriptor ed)
   {
     m_buffer_for_segments.add_segment(p1, p2, m_default_color_segment);
-    GSS_push<GSSelector, edge_descriptor>::run(gss, ed);
+    GSS_push<GSSelector, edge_descriptor>::add_edge(gss, ed);
   }
 
   template <typename KPoint, class GSSelector, typename edge_descriptor>
@@ -226,7 +226,7 @@ public:
                    edge_descriptor ed)
   {
     m_buffer_for_segments.add_segment(p1, p2, acolor);
-    GSS_push<GSSelector, edge_descriptor>::run(gss, ed);
+    GSS_push<GSSelector, edge_descriptor>::add_edge(gss, ed);
   }
 
   template <typename KPoint>
@@ -336,7 +336,7 @@ public:
   }
 
   template<typename GSSelector, typename face_descriptor>
-  void face_end(GSSelector* gss = nullptr, face_descriptor fd = {})
+  void face_end(GSSelector* gss, face_descriptor fd)
   {
     if (m_buffer_for_faces.is_a_face_started())
     {
@@ -351,7 +351,7 @@ public:
       }
       ++m_full_faces_number; // ADDED
 
-      GSS_push<GSSelector, face_descriptor>::run(gss, fd);
+      GSS_push<GSSelector, face_descriptor>::add_face(gss, fd);
     }
   }
 

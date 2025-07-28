@@ -276,7 +276,7 @@ template<unsigned int d_, unsigned int ambient_dim, class Traits_,
          class Items_, class Alloc_,
          template <unsigned int, class, class, class, class> class Map,
          class Refs, class Storage_,
-         class GSOptions, class GSSelector=void>
+         class GSOptions, class GSSelector>
 void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
                            CGAL::Graphics_scene& graphics_scene,
                            const GSOptions& gso,
@@ -286,13 +286,31 @@ void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
                                           graphics_scene, gso, gss);
 }
 
+template<unsigned int d_, unsigned int ambient_dim, class Traits_,
+         class Items_, class Alloc_,
+         template <unsigned int, class, class, class, class> class Map,
+         class Refs, class Storage_,
+         class GSOptions>
+void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gso)
+{
+  CGAL::Graphics_scene_selector<CGAL_LCC_TYPE,
+                                typename CGAL_LCC_TYPE::Dart_const_handle,
+                                typename CGAL_LCC_TYPE::Dart_const_handle,
+                                typename CGAL_LCC_TYPE::Dart_const_handle,
+                                void> gss;
+  draw_function_for_lcc::compute_elements(static_cast<const Refs&>(alcc),
+                                          graphics_scene, gso, &gss);
+}
+
 // add_to_graphics_scene: to add a LCC in the given graphic buffer, without a
 // graphics scene options. Use default drawing values.
 template<unsigned int d_, unsigned int ambient_dim, class Traits_,
          class Items_, class Alloc_,
          template <unsigned int, class, class, class, class> class Map,
          class Refs, class Storage_,
-         class GSSelector=void>
+         class GSSelector>
 void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
                            CGAL::Graphics_scene& graphics_scene,
                            GSSelector* gss = nullptr) // ADDED
@@ -318,6 +336,40 @@ void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
   add_to_graphics_scene(alcc, graphics_scene, gso, gss); // MODIFIED
 }
 
+template<unsigned int d_, unsigned int ambient_dim, class Traits_,
+         class Items_, class Alloc_,
+         template <unsigned int, class, class, class, class> class Map,
+         class Refs, class Storage_>
+void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
+                           CGAL::Graphics_scene& graphics_scene)
+{
+  CGAL::Graphics_scene_selector<CGAL_LCC_TYPE,
+                                typename CGAL_LCC_TYPE::Dart_const_handle,
+                                typename CGAL_LCC_TYPE::Dart_const_handle,
+                                typename CGAL_LCC_TYPE::Dart_const_handle,
+                                void> gss;
+
+  CGAL::Graphics_scene_options<CGAL_LCC_TYPE,
+                               typename CGAL_LCC_TYPE::Dart_const_handle,
+                               typename CGAL_LCC_TYPE::Dart_const_handle,
+                               typename CGAL_LCC_TYPE::Dart_const_handle,
+                               typename CGAL_LCC_TYPE::Dart_const_handle>
+    gso;
+
+  gso.colored_volume = [](const CGAL_LCC_TYPE&,
+                          typename CGAL_LCC_TYPE::Dart_const_handle) -> bool
+  { return true; };
+
+  gso.volume_color =  [] (const CGAL_LCC_TYPE& alcc,
+                          typename CGAL_LCC_TYPE::Dart_const_handle dh) -> CGAL::IO::Color
+  {
+    CGAL::Random random((unsigned int)(alcc.darts().index(dh)));
+    return get_random_color(random);
+  };
+
+  add_to_graphics_scene(alcc, graphics_scene, gso, &gss); // MODIFIED
+}
+
 // Specialization of draw function for a LCC, with a drawing graphics scene options.
 template<unsigned int d_, unsigned int ambient_dim, class Traits_,
          class Items_, class Alloc_,
@@ -341,6 +393,31 @@ void draw(const CGAL_LCC_TYPE& alcc, const char *title="LCC Basic Viewer")
 {
   CGAL::Graphics_scene buffer;
   add_to_graphics_scene(alcc, buffer);
+  draw_graphics_scene(buffer, title);
+}
+
+template<unsigned int d_, unsigned int ambient_dim, class Traits_,
+         class Items_, class Alloc_,
+         template <unsigned int, class, class, class, class> class Map,
+         class Refs, class Storage_,
+         class GSOptions, class GSSelector>
+void draw(const CGAL_LCC_TYPE& alcc, const GSOptions& gso,
+          GSSelector& gss, const char *title="LCC Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(alcc, buffer, gso, &gss);
+  draw_graphics_scene(buffer, title);
+}
+
+template<unsigned int d_, unsigned int ambient_dim, class Traits_,
+         class Items_, class Alloc_,
+         template <unsigned int, class, class, class, class> class Map,
+         class Refs, class Storage_,
+         class GSSelector>
+void draw(GSSelector& gss, const CGAL_LCC_TYPE& alcc, const char *title="LCC Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(alcc, buffer, &gss);
   draw_graphics_scene(buffer, title);
 }
 
