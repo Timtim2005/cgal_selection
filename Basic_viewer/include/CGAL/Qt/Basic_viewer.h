@@ -852,71 +852,69 @@ template<typename GSSelector>
     int faceId = -1;
     int nb_if = 0;
     float depth = 1.0f;
-    glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+    //glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+    //std::cout << "Depth at mouse position: " << depth << std::endl;
 
-    if(depth != 1.0f)
+    std::vector<BufferType> faces_buffer = m_scene.get_array_of_index(GS::POS_FACES);
+    std::vector<std::size_t> full_faces_index = m_scene.get_full_faces_index();
+    CGAL::qglviewer::Vec point(event->position().x(), event->position().y(), 0);
+
+    // Precompute projection matrix (based on QGLViewer documentation)
+    /*GLint viewport[4];
+    GLdouble projection[16], modelview[16];
+    GLdouble matrix[16];
+    
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
+    glGetDoublev(GL_PROJECTION_MATRIX, projection);
+    
+    // Compute combined projection × modelview matrix
+    for (unsigned short m = 0; m < 4; ++m) {
+      for (unsigned short l = 0; l < 4; ++l) {
+        GLdouble sum = 0.0;
+        for (unsigned short k = 0; k < 4; ++k) {
+          sum += projection[l + 4*k] * modelview[k + 4*m];
+        }
+        matrix[l + 4*m] = sum;
+      }
+    }*/
+
+    for(auto it = faces_buffer.begin(); it != faces_buffer.end(); it+=9, ++id)
     {
-      std::vector<BufferType> faces_buffer = m_scene.get_array_of_index(GS::POS_FACES);
-      std::vector<std::size_t> full_faces_index = m_scene.get_full_faces_index();
-      CGAL::qglviewer::Vec point(event->position().x(), event->position().y(), 0);
+      // Use precomputed matrix for projection
+      v1 = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2)));
+      v2 = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+3), *(it+4), *(it+5)));
+      v3 = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+6), *(it+7), *(it+8)));
 
-      // Precompute projection matrix (based on QGLViewer documentation)
-      GLint viewport[4];
-      GLdouble projection[16], modelview[16];
-      GLdouble matrix[16];
-      
-      glGetIntegerv(GL_VIEWPORT, viewport);
-      glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
-      glGetDoublev(GL_PROJECTION_MATRIX, projection);
-      
-      // Compute combined projection × modelview matrix
-      for (unsigned short m = 0; m < 4; ++m) {
-        for (unsigned short l = 0; l < 4; ++l) {
-          GLdouble sum = 0.0;
-          for (unsigned short k = 0; k < 4; ++k) {
-            sum += projection[l + 4*k] * modelview[k + 4*m];
-          }
-          matrix[l + 4*m] = sum;
-        }
-      }
-
-      for(auto it = faces_buffer.begin(); it != faces_buffer.end(); it+=9, ++id)
+      if(!(v1.z < 0 && v2.z < 0 && v3.z < 0) && 
+        !(v1.z > minPtDepth && v2.z > minPtDepth && v3.z > minPtDepth) &&
+        !(v1.z > 1 || v2.z > 1 || v3.z > 1) &&
+        /*!(((v1.x < 0 || v1.x > this->width()) || (v1.y < 0 || v1.y > this->height())) &&
+        ((v2.x < 0 || v2.x > this->width()) || (v2.y < 0 || v2.y > this->height())) &&
+        ((v3.x < 0 || v3.x > this->width()) || (v3.y < 0 || v3.y > this->height()))) &&*/
+        pointWeightFast(point, v1, v2, v3, ptDepth) && ptDepth < minPtDepth)
       {
-        std::cout << "Checking face " << full_faces_index[id] << std::endl;
-        // Use precomputed matrix for projection
-        v1 = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2)));
-        v2 = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+3), *(it+4), *(it+5)));
-        v3 = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+6), *(it+7), *(it+8)));
-
-        if(!(v1.z < 0 && v2.z < 0 && v3.z < 0) && 
-          !(v1.z > minPtDepth && v2.z > minPtDepth && v3.z > minPtDepth) &&
-          !(v1.z > 1 || v2.z > 1 || v3.z > 1) &&
-          /*!(((v1.x < 0 || v1.x > this->width()) || (v1.y < 0 || v1.y > this->height())) &&
-          ((v2.x < 0 || v2.x > this->width()) || (v2.y < 0 || v2.y > this->height())) &&
-          ((v3.x < 0 || v3.x > this->width()) || (v3.y < 0 || v3.y > this->height()))) &&*/
-          pointWeightFast(point, v1, v2, v3, ptDepth) && ptDepth < minPtDepth)
-        {
-          ++nb_if;
-          faceId = full_faces_index[id];
-          finalId = id;
-          minPtDepth = ptDepth;
-          finalV1 = v1;
-          finalV2 = v2;
-          finalV3 = v3;
-        }
-      }
-
-      auto end = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double, std::milli> duration = end - start;
-      std::cout << "Number of faces checked: " << nb_if << std::endl;
-      std::cout << "Face selection took: " << duration.count() << " ms" << std::endl;
-
-      if(faceId != -1)
-      {
-        std::cout << "Selected face ID: " << faceId << std::endl;
-        return gss.get_face_descriptor(faceId);
+        ++nb_if;
+        faceId = full_faces_index[id];
+        finalId = id;
+        minPtDepth = ptDepth;
+        finalV1 = v1;
+        finalV2 = v2;
+        finalV3 = v3;
       }
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "Number of faces checked: " << nb_if << std::endl;
+    std::cout << "Face selection took: " << duration.count() << " ms" << std::endl;
+
+    if(faceId != -1)
+    {
+      std::cout << "Selected face ID: " << faceId << std::endl;
+      return gss.get_face_descriptor(faceId);
+    }
+
     return typename GSSelector::face_descriptor();
   }
 
@@ -933,48 +931,47 @@ template<typename GSSelector>
     glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
 
     // Precompute projection matrix
-    if(depth != 1.0f)
+
+    /*GLint viewport[4];
+    GLdouble projection[16], modelview[16];
+    GLdouble matrix[16];
+    
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
+    glGetDoublev(GL_PROJECTION_MATRIX, projection);
+    
+    // Compute combined projection × modelview matrix
+    for (unsigned short m = 0; m < 4; ++m) {
+      for (unsigned short l = 0; l < 4; ++l) {
+        GLdouble sum = 0.0;
+        for (unsigned short k = 0; k < 4; ++k) {
+          sum += projection[l + 4*k] * modelview[k + 4*m];
+        }
+        matrix[l + 4*m] = sum;
+      }
+    }*/
+
+    std::vector<BufferType> segments_buffer = m_scene.get_array_of_index(GS::POS_SEGMENTS);
+    for(auto it = segments_buffer.begin(); it != segments_buffer.end(); it+=6, ++id)
     {
-      GLint viewport[4];
-      GLdouble projection[16], modelview[16];
-      GLdouble matrix[16];
-      
-      glGetIntegerv(GL_VIEWPORT, viewport);
-      glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
-      glGetDoublev(GL_PROJECTION_MATRIX, projection);
-      
-      // Compute combined projection × modelview matrix
-      for (unsigned short m = 0; m < 4; ++m) {
-        for (unsigned short l = 0; l < 4; ++l) {
-          GLdouble sum = 0.0;
-          for (unsigned short k = 0; k < 4; ++k) {
-            sum += projection[l + 4*k] * modelview[k + 4*m];
-          }
-          matrix[l + 4*m] = sum;
-        }
-      }
-
-      std::vector<BufferType> segments_buffer = m_scene.get_array_of_index(GS::POS_SEGMENTS);
-      for(auto it = segments_buffer.begin(); it != segments_buffer.end(); it+=6, ++id)
+      CGAL::qglviewer::Vec lineP = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2)));
+      CGAL::qglviewer::Vec lineQ = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+3), *(it+4), *(it+5)));
+      CGAL::qglviewer::Vec point(event->position().x(), event->position().y(), 0);
+      float avgDepth = (lineP.z + lineQ.z) / 2.0;
+      if(avgDepth < minAvgDepth && containsPoint(lineP, lineQ, point))
       {
-        CGAL::qglviewer::Vec lineP = projectPoint(CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2)), matrix, viewport);
-        CGAL::qglviewer::Vec lineQ = projectPoint(CGAL::qglviewer::Vec(*(it+3), *(it+4), *(it+5)), matrix, viewport);
-        CGAL::qglviewer::Vec point(event->position().x(), event->position().y(), 0);
-        float avgDepth = (lineP.z + lineQ.z) / 2.0;
-        if(avgDepth < minAvgDepth && containsPoint(lineP, lineQ, point))
-        {
-          finalId = id;
-          minAvgDepth = avgDepth;
-          finalLineP = lineP;
-          finalLineQ = lineQ;
-        }
-      }
-
-      if(finalId != -1)
-      {
-        return gss.get_edge_descriptor(finalId);
+        finalId = id;
+        minAvgDepth = avgDepth;
+        finalLineP = lineP;
+        finalLineQ = lineQ;
       }
     }
+
+    if(finalId != -1)
+    {
+      return gss.get_edge_descriptor(finalId);
+    }
+
     return typename GSSelector::edge_descriptor();
   }
 template<typename GSSelector>
@@ -989,54 +986,52 @@ template<typename GSSelector>
     float depth = 1.0f;
     glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
 
-    if(depth != 1.0f)
+    // Precompute projection matrix
+    /*GLint viewport[4];
+    GLdouble projection[16], modelview[16];
+    GLdouble matrix[16];
+    
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
+    glGetDoublev(GL_PROJECTION_MATRIX, projection);
+    
+    // Compute combined projection × modelview matrix
+    for (unsigned short m = 0; m < 4; ++m) {
+      for (unsigned short l = 0; l < 4; ++l) {
+        GLdouble sum = 0.0;
+        for (unsigned short k = 0; k < 4; ++k) {
+          sum += projection[l + 4*k] * modelview[k + 4*m];
+        }
+        matrix[l + 4*m] = sum;
+      }
+    }*/
+
+    std::vector<BufferType> points_buffer = m_scene.get_array_of_index(GS::POS_POINTS);
+    for(auto it = points_buffer.begin(); it != points_buffer.end(); it+=3, ++id)
     {
-      // Precompute projection matrix
-      GLint viewport[4];
-      GLdouble projection[16], modelview[16];
-      GLdouble matrix[16];
-      
-      glGetIntegerv(GL_VIEWPORT, viewport);
-      glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
-      glGetDoublev(GL_PROJECTION_MATRIX, projection);
-      
-      // Compute combined projection × modelview matrix
-      for (unsigned short m = 0; m < 4; ++m) {
-        for (unsigned short l = 0; l < 4; ++l) {
-          GLdouble sum = 0.0;
-          for (unsigned short k = 0; k < 4; ++k) {
-            sum += projection[l + 4*k] * modelview[k + 4*m];
-          }
-          matrix[l + 4*m] = sum;
-        }
-      }
-
-      std::vector<BufferType> points_buffer = m_scene.get_array_of_index(GS::POS_POINTS);
-      for(auto it = points_buffer.begin(); it != points_buffer.end(); it+=3, ++id)
+      CGAL::qglviewer::Vec point = CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2));
+      CGAL::qglviewer::Vec vecScreen = camera()->projectedCoordinatesOf(point);
+      if(event->position().x() > vecScreen.x - 5 && event->position().x() < vecScreen.x + 5 &&
+        event->position().y() > vecScreen.y - 5 && event->position().y() < vecScreen.y + 5 &&
+        vecScreen.z < finalVecScreen.z)
       {
-        CGAL::qglviewer::Vec point = CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2));
-        CGAL::qglviewer::Vec vecScreen = projectPoint(point, matrix, viewport);
-        if(event->position().x() > vecScreen.x - 5 && event->position().x() < vecScreen.x + 5 &&
-          event->position().y() > vecScreen.y - 5 && event->position().y() < vecScreen.y + 5 &&
-          vecScreen.z < finalVecScreen.z)
-        {
-          finalVecScreen = vecScreen;
-          finalPoint = point;
-          finalId = id;
-        }
-      }
-
-      if(finalId != -1)
-      {
-        return gss.get_vertex_descriptor(finalId);
+        finalVecScreen = vecScreen;
+        finalPoint = point;
+        finalId = id;
       }
     }
+
+    if(finalId != -1)
+    {
+      return gss.get_vertex_descriptor(finalId);
+    }
+  
     return typename GSSelector::vertex_descriptor();
   }
 
 protected:
   // Fast projection using precomputed matrix (based on QGLViewer documentation)
-  CGAL::qglviewer::Vec projectPoint(const CGAL::qglviewer::Vec& point, const GLdouble* matrix, const GLint* viewport) // ADDED
+  /*CGAL::qglviewer::Vec projectPoint(const CGAL::qglviewer::Vec& point, const GLdouble* matrix, const GLint* viewport) // ADDED
   {
     GLdouble v[4], vs[4];
     v[0] = point[0]; v[1] = point[1]; v[2] = point[2]; v[3] = 1.0;
@@ -1058,7 +1053,7 @@ protected:
     vs[1] = vs[1] * viewport[3] + viewport[1];
     
     return CGAL::qglviewer::Vec(vs[0], viewport[3] - vs[1], vs[2]);
-  }
+  }*/
 
   bool containsPoint(CGAL::qglviewer::Vec lineP, CGAL::qglviewer::Vec lineQ, CGAL::qglviewer::Vec point) // ADDED
   {

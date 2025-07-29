@@ -54,14 +54,53 @@ int main(int argc, char* argv[])
 {
   const std::string filename = (argc>1) ? argv[1] : CGAL::data_file_path("meshes/elephant.off");
 
+  CGAL::Graphics_scene gs;
+  CGAL::Graphics_scene_selector<Mesh,
+                               typename Mesh::Vertex_index,
+                               typename Mesh::Edge_index,
+                               typename Mesh::Face_index,
+                               void> gss;
+
   Mesh sm;
+
+  Mesh::Face_index res;
+
   if(!CGAL::IO::read_polygon_mesh(filename, sm))
   {
     std::cerr << "Invalid input file: " << filename << std::endl;
     return EXIT_FAILURE;
   }
 
-  CGAL::draw(sm, Colored_faces_given_height(sm));
+  CGAL::add_to_graphics_scene(sm, gs, Colored_faces_given_height(sm), &gss);
+
+  #ifdef CGAL_USE_BASIC_VIEWER
+
+  CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+  if(app)
+  {
+    app.basic_viewer().on_mouse_pressed = [&gss, &res, &sm] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+    {
+      if(e->button() == Qt::LeftButton)
+      {
+        auto point_pmap = get(CGAL::vertex_point, sm);
+        Mesh::Face_index dh = basic_viewer->select_face(e, gss);
+        if(dh == Mesh::null_face())
+          return false;
+
+        auto hd = halfedge(dh, sm);
+        auto v = source(hd, sm);
+
+        std::cout << get(point_pmap, v) << std::endl;
+
+        return true;
+      }
+      return false;
+    };
+
+    app.run();
+  }
+
+  #endif
 
   return EXIT_SUCCESS;
 }

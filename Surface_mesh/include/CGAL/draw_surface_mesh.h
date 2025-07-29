@@ -164,6 +164,20 @@ void add_to_graphics_scene(const Surface_mesh<K>& amesh,
 { add_to_graphics_scene_for_fg(amesh, graphics_scene,
                                Graphics_scene_options_surface_mesh<K>(amesh)); }
 
+template<class K,  class GSOptions, class GSSelector>
+void add_to_graphics_scene(const Surface_mesh<K>& amesh,
+                           CGAL::Graphics_scene &graphics_scene,
+                           const GSOptions &gs_options,
+                           GSSelector *gs_selector)
+{ add_to_graphics_scene_for_fg(amesh, graphics_scene, gs_options, gs_selector); }
+
+template<class K, class GSSelector>
+void add_to_graphics_scene(const Surface_mesh<K>& amesh,
+                           CGAL::Graphics_scene &graphics_scene,
+                           GSSelector *gs_selector)
+{ add_to_graphics_scene_for_fg(amesh, graphics_scene,
+                               Graphics_scene_options_surface_mesh<K>(amesh), gs_selector); }
+
   // Specialization of draw function.
 template<class K>
 void draw(const Surface_mesh<K>& amesh,
@@ -181,6 +195,27 @@ void draw(const Surface_mesh<K>& amesh,
 {
   CGAL::Graphics_scene buffer;
   add_to_graphics_scene(amesh, buffer, gs_options);
+  draw_graphics_scene(buffer, title);
+}
+
+template<class K, class GSSelector>
+void draw(const Surface_mesh<K>& amesh,
+          GSSelector *gs_selector,
+          const char* title="Surface_mesh Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(amesh, buffer, gs_selector);
+  draw_graphics_scene(buffer, title);
+}
+
+template<class K, class GSOptions, class GSSelector>
+void draw(const Surface_mesh<K>& amesh,
+          const GSOptions &gs_options,
+          GSSelector *gs_selector,
+          const char* title="Surface_mesh Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(amesh, buffer, gs_options, gs_selector);
   draw_graphics_scene(buffer, title);
 }
 

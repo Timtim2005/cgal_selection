@@ -24,10 +24,11 @@ namespace CGAL {
 
 namespace draw_function_for_FG {
 
-template <typename FG, typename GSOptions>
+template <typename FG, typename GSOptions, class GSSelector>
 void compute_elements(const FG &fg,
                       CGAL::Graphics_scene &graphics_scene,
-                      const GSOptions &gs_options)
+                      const GSOptions &gs_options,
+                      GSSelector *gs_selector)
 {
   using Point=typename boost::property_map_value<FG, CGAL::vertex_point_t>::type;
   using Kernel = typename CGAL::Kernel_traits<Point>::Kernel;
@@ -78,7 +79,7 @@ void compute_elements(const FG &fg,
           hd = next(hd, fg);
         }
         while (hd != first_hd);
-        graphics_scene.face_end();
+        graphics_scene.face_end(gs_selector, fh);
       }
     }
   }
@@ -91,12 +92,12 @@ void compute_elements(const FG &fg,
       {
         graphics_scene.add_segment(get(point_pmap, source(halfedge(e, fg), fg)),
                                    get(point_pmap, target(halfedge(e, fg), fg)),
-                                   gs_options.edge_color(fg, e));
+                                   gs_options.edge_color(fg, e), gs_selector, e);
       }
       else
       {
         graphics_scene.add_segment(get(point_pmap, source(halfedge(e, fg), fg)),
-                                   get(point_pmap, target(halfedge(e, fg), fg)));
+                                   get(point_pmap, target(halfedge(e, fg), fg)), gs_selector, e);
       }
     }
   }
@@ -108,11 +109,11 @@ void compute_elements(const FG &fg,
       if(gs_options.colored_vertex(fg, v)) // vertex is colored
       {
         graphics_scene.add_point(get(point_pmap, v),
-                                 gs_options.vertex_color(fg, v));
+                                 gs_options.vertex_color(fg, v), gs_selector, v);
       }
       else
       {
-        graphics_scene.add_point(get(point_pmap, v));
+        graphics_scene.add_point(get(point_pmap, v), gs_selector, v);
       }
     }
   }
@@ -125,7 +126,13 @@ void add_to_graphics_scene_for_fg(const FG &fg,
                                   CGAL::Graphics_scene &graphics_scene,
                                   const GSOptions &gs_options)
 {
-  draw_function_for_FG::compute_elements(fg, graphics_scene, gs_options);
+  Graphics_scene_selector<FG,
+                          typename boost::graph_traits<FG>::vertex_descriptor,
+                          typename boost::graph_traits<FG>::edge_descriptor,
+                          typename boost::graph_traits<FG>::face_descriptor,
+                          void> gs_selector;
+
+  draw_function_for_FG::compute_elements(fg, graphics_scene, gs_options, &gs_selector);
 }
 
 template <class FG>
@@ -153,6 +160,41 @@ void add_to_graphics_scene_for_fg(const FG &fg,
 
   add_to_graphics_scene_for_fg(fg, graphics_scene, gs_options);
 }
+
+template <class FG, class GSOptions, class GSSelector>
+void add_to_graphics_scene_for_fg(const FG &fg,
+                                  CGAL::Graphics_scene &graphics_scene,
+                                  const GSOptions &gs_options, GSSelector *gs_selector)
+{
+  draw_function_for_FG::compute_elements(fg, graphics_scene, gs_options, gs_selector);
+}
+
+template <class FG, class GSSelector>
+void add_to_graphics_scene_for_fg(const FG &fg,
+                                  CGAL::Graphics_scene &graphics_scene, GSSelector *gs_selector)
+{
+  Graphics_scene_options<FG,
+                         typename boost::graph_traits<FG>::vertex_descriptor,
+                         typename boost::graph_traits<FG>::edge_descriptor,
+                         typename boost::graph_traits<FG>::face_descriptor>
+    gs_options;
+
+  gs_options.colored_face = [](const FG&,
+             typename boost::graph_traits<FG>::face_descriptor) -> bool
+  { return true; };
+
+  gs_options.face_color =  [] (const FG&,
+             typename boost::graph_traits<FG>::face_descriptor fh) -> CGAL::IO::Color
+  {
+    if (fh==boost::graph_traits<FG>::null_face())
+    { return CGAL::IO::Color(100, 125, 200); }
+
+    return get_random_color(CGAL::get_default_random());
+  };
+
+  add_to_graphics_scene_for_fg(fg, graphics_scene, gs_options, gs_selector);
+}
+
 
 } // End namespace CGAL
 

@@ -108,7 +108,6 @@ struct GSS_push
     if(gss != nullptr && std::is_same<descriptor, typename GSSelector::face_descriptor>::value)
     {
       gss->add_face(desc);
-      std::cout << "Face added to selector " << std::endl;
     }
   }
   
@@ -117,7 +116,6 @@ struct GSS_push
     if(gss != nullptr && std::is_same<descriptor, typename GSSelector::edge_descriptor>::value)
     {
       gss->add_edge(desc);
-      std::cout << "Edge added to selector " << std::endl;
     }
   }
 
@@ -126,7 +124,6 @@ struct GSS_push
     if(gss != nullptr && std::is_same<descriptor, typename GSSelector::vertex_descriptor>::value)
     {
       gss->add_vertex(desc);
-      std::cout << "Vertex added to selector " << std::endl;
     }
   }
 };

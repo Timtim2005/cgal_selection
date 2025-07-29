@@ -46,6 +46,15 @@ int main()
         } while (cur != dh);
 
         return true;
+        /*LCC::Dart_const_handle dh = basic_viewer->select_edge(e, gss);
+        if(dh == LCC::null_descriptor)
+          return false;
+        LCC::Dart_const_handle cur = dh;
+
+        std::cout << lcc.point(cur) << std::endl;
+        std::cout << lcc.point(lcc.other_extremity(cur)) << std::endl;
+
+        return true;*/
       }
       return false;
     };
