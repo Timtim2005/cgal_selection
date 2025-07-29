@@ -414,7 +414,7 @@ template<unsigned int d_, unsigned int ambient_dim, class Traits_,
          template <unsigned int, class, class, class, class> class Map,
          class Refs, class Storage_,
          class GSSelector>
-void draw(GSSelector& gss, const CGAL_LCC_TYPE& alcc, const char *title="LCC Basic Viewer")
+void draw(const CGAL_LCC_TYPE& alcc, GSSelector& gss, const char *title="LCC Basic Viewer")
 {
   CGAL::Graphics_scene buffer;
   add_to_graphics_scene(alcc, buffer, &gss);
