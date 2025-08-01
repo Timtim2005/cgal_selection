@@ -250,26 +250,6 @@ void compute_elements(const LCC& lcc,
   CGAL::Linear_cell_complex_base<d_, ambient_dim, Traits_, Items_, Alloc_,     \
                                  Map, Refs, Storage_>
 
-/*template<unsigned int d_, unsigned int ambient_dim, class Traits_,
-         class Items_, class Alloc_,
-         template <unsigned int, class, class, class, class> class Map,
-         class Refs, class Storage_,
-         class GSOptions>
-void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
-                           CGAL::Graphics_scene& graphics_scene,
-                           const GSOptions& gso)
-{
-  struct NullSelector {
-    using vertex_descriptor = typename CGAL_LCC_TYPE::Dart_const_handle;
-    using edge_descriptor = typename CGAL_LCC_TYPE::Dart_const_handle;
-    using face_descriptor = typename CGAL_LCC_TYPE::Dart_const_handle;
-    void add_vertex(vertex_descriptor) {}
-    void add_edge(edge_descriptor) {}
-    void add_face(face_descriptor) {}
-  };
-  add_to_graphics_scene(alcc, graphics_scene, gso, static_cast<NullSelector*>(nullptr));
-}*/
-
 // add_to_graphics_scene: to add a LCC in the given graphic buffer, with a
 // graphics scene options.
 template<unsigned int d_, unsigned int ambient_dim, class Traits_,
@@ -299,7 +279,7 @@ void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
                                 typename CGAL_LCC_TYPE::Dart_const_handle,
                                 typename CGAL_LCC_TYPE::Dart_const_handle,
                                 typename CGAL_LCC_TYPE::Dart_const_handle,
-                                void> gss;
+                                void> gss(false);
   draw_function_for_lcc::compute_elements(static_cast<const Refs&>(alcc),
                                           graphics_scene, gso, &gss);
 }
@@ -347,7 +327,7 @@ void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
                                 typename CGAL_LCC_TYPE::Dart_const_handle,
                                 typename CGAL_LCC_TYPE::Dart_const_handle,
                                 typename CGAL_LCC_TYPE::Dart_const_handle,
-                                void> gss;
+                                void> gss(false);
 
   CGAL::Graphics_scene_options<CGAL_LCC_TYPE,
                                typename CGAL_LCC_TYPE::Dart_const_handle,

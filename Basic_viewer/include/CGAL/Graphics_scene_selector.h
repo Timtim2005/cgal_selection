@@ -40,13 +40,14 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
   typedef FaceDescriptor face_descriptor;
 
   Graphics_scene_selector() {}
+  Graphics_scene_selector(bool enabled) : enabled(enabled) {}
 
   template<class GSS, class descriptor>
   friend struct GSS_push;
 
   vertex_descriptor get_vertex_descriptor(std::size_t index) const
   {
-    if (index >= m_vertices_index.size())
+    if (index >= m_vertices_index.size() || !enabled)
     {
       return vertex_descriptor(); // Return an invalid descriptor
     }
@@ -55,7 +56,7 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
 
   edge_descriptor get_edge_descriptor(std::size_t index) const
   {
-    if (index >= m_edges_index.size())
+    if (index >= m_edges_index.size() || !enabled)
     {
       return edge_descriptor(); // Return an invalid descriptor
     }
@@ -64,7 +65,7 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
 
   face_descriptor get_face_descriptor(std::size_t index) const
   {
-    if (index >= m_faces_index.size())
+    if (index >= m_faces_index.size() || !enabled)
     {
       return face_descriptor(); // Return an invalid descriptor
     }
@@ -81,23 +82,27 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
 protected:
   void add_vertex(vertex_descriptor vd)
   {
-    m_vertices_index.push_back(vd);
+    if(enabled)
+      m_vertices_index.push_back(vd);
   }
 
   void add_edge(edge_descriptor ed)
   {
-    m_edges_index.push_back(ed);
+    if(enabled)
+      m_edges_index.push_back(ed);
   }
 
   void add_face(face_descriptor fd)
   {
-    m_faces_index.push_back(fd);
+    if(enabled)
+      m_faces_index.push_back(fd);
   }
 
 protected:
   std::vector<vertex_descriptor> m_vertices_index;
   std::vector<edge_descriptor> m_edges_index;
   std::vector<face_descriptor> m_faces_index;
+  bool enabled = true;
 };
 
 template<class GSSelector, class descriptor>

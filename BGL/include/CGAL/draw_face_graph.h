@@ -130,7 +130,7 @@ void add_to_graphics_scene_for_fg(const FG &fg,
                           typename boost::graph_traits<FG>::vertex_descriptor,
                           typename boost::graph_traits<FG>::edge_descriptor,
                           typename boost::graph_traits<FG>::face_descriptor,
-                          void> gs_selector;
+                          void> gs_selector(false);
 
   draw_function_for_FG::compute_elements(fg, graphics_scene, gs_options, &gs_selector);
 }

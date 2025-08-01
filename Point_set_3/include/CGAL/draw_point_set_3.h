@@ -101,10 +101,11 @@ namespace CGAL {
 
 namespace draw_function_for_PointSet {
 
-template <class PointSet, class GSOptions>
+template <class PointSet, class GSOptions, class GSSelector>
 void compute_elements(const PointSet& pointset,
                       Graphics_scene& graphics_scene,
-                      const GSOptions& gs_options)
+                      const GSOptions& gs_options,
+                      GSSelector* gs_selector)
 {
   if (!gs_options.are_vertices_enabled())
   { return; }
@@ -117,25 +118,15 @@ void compute_elements(const PointSet& pointset,
       if (gs_options.colored_vertex(pointset, it))
       {
         graphics_scene.add_point(pointset.point(*it),
-                                 gs_options.vertex_color(pointset, it));
+                                 gs_options.vertex_color(pointset, it), gs_selector, *it);
       }
       else
-      { graphics_scene.add_point(pointset.point(*it)); }
+      { graphics_scene.add_point(pointset.point(*it), gs_selector, *it); }
     }
   }
 }
 
 } // namespace draw_function_for_PointSet
-
-template <class P, class V, class GSOptions>
-void add_to_graphics_scene(const Point_set_3<P, V>& apointset,
-                           Graphics_scene& graphics_scene,
-                           const GSOptions& gs_options)
-{
-  draw_function_for_PointSet::compute_elements(apointset,
-                                               graphics_scene,
-                                               gs_options);
-}
 
 template <class P, class V>
 void add_to_graphics_scene(const Point_set_3<P, V>& apointset,
@@ -144,11 +135,59 @@ void add_to_graphics_scene(const Point_set_3<P, V>& apointset,
   CGAL::Graphics_scene_options<Point_set_3<P, V>,
                                typename Point_set_3<P, V>::const_iterator,
                                int, int> gs_options;
-  add_to_graphics_scene(apointset, graphics_scene, gs_options);
+  CGAL::Graphics_scene_selector<Point_set_3<P, V>,
+                                  typename Point_set_3<P, V>::Index,
+                                  int, int,
+                                  void> gs_selector(false);
+  add_to_graphics_scene(apointset, graphics_scene, gs_options, &gs_selector);
+}
+
+template <class P, class V, class GSOptions>
+void add_to_graphics_scene(const Point_set_3<P, V>& apointset,
+                           Graphics_scene& graphics_scene,
+                           const GSOptions& gs_options)
+{
+  CGAL::Graphics_scene_selector<Point_set_3<P, V>,
+                                  typename Point_set_3<P, V>::Index,
+                                  int, int,
+                                  void> gs_selector(false);
+  add_to_graphics_scene(apointset, graphics_scene, gs_options, &gs_selector);
+}
+
+template <class P, class V, class GSSelector>
+void add_to_graphics_scene(const Point_set_3<P, V>& apointset,
+                           Graphics_scene& graphics_scene,
+                           GSSelector* gs_selector)
+{
+  CGAL::Graphics_scene_options<Point_set_3<P, V>,
+                               typename Point_set_3<P, V>::const_iterator,
+                               int, int> gs_options;
+  add_to_graphics_scene(apointset, graphics_scene, gs_options, gs_selector);
+}
+
+template <class P, class V, class GSOptions, class GSSelector>
+void add_to_graphics_scene(const Point_set_3<P, V>& apointset,
+                           Graphics_scene& graphics_scene,
+                           const GSOptions& gs_options,
+                           GSSelector* gs_selector)
+{
+  draw_function_for_PointSet::compute_elements(apointset,
+                                               graphics_scene,
+                                               gs_options,
+                                               gs_selector);
+}
+
+template <class P, class V>
+void draw(const Point_set_3<P, V>& apointset,
+          const char *title="Point_set_3 Basic Viewer")
+{
+  Graphics_scene buffer;
+  add_to_graphics_scene(apointset, buffer);
+  draw_graphics_scene(buffer, title);
 }
 
 // Specialization of draw function.
-  template <class P, class V, class GSOptions>
+template <class P, class V, class GSOptions>
 void draw(const Point_set_3<P, V>& apointset,
           const GSOptions& gs_options,
           const char *title="Point_set_3 Basic Viewer")
@@ -158,12 +197,25 @@ void draw(const Point_set_3<P, V>& apointset,
   draw_graphics_scene(buffer, title);
 }
 
-template <class P, class V>
+// Specialization of draw function.
+template <class P, class V, class GSSelector>
 void draw(const Point_set_3<P, V>& apointset,
+          GSSelector* gs_selector,
           const char *title="Point_set_3 Basic Viewer")
 {
   Graphics_scene buffer;
-  add_to_graphics_scene(apointset, buffer);
+  add_to_graphics_scene(apointset, buffer, gs_selector);
+  draw_graphics_scene(buffer, title);
+}
+
+template <class P, class V, class GSOptions, class GSSelector>
+void draw(const Point_set_3<P, V>& apointset,
+          const GSOptions& gs_options,
+          GSSelector* gs_selector,
+          const char *title="Point_set_3 Basic Viewer")
+{
+  Graphics_scene buffer;
+  add_to_graphics_scene(apointset, buffer, gs_options, gs_selector);
   draw_graphics_scene(buffer, title);
 }
 

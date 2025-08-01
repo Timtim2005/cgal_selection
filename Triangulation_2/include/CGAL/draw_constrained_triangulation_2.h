@@ -69,16 +69,46 @@ template <class Gt, class Tds, class Itag, class InDomainPmap>
 void add_to_graphics_scene(const CGAL_T2_TYPE& at2, InDomainPmap ipm,
                            CGAL::Graphics_scene& graphics_scene)
 {
+  CGAL::Graphics_scene_selector<CGAL_T2_TYPE,
+                  typename CGAL_T2_TYPE::Vertex_handle,
+                  typename CGAL_T2_TYPE::Finite_edges_iterator,
+                  typename CGAL_T2_TYPE::Finite_faces_iterator,
+                  void> gs_selector(false);
+
   Graphics_scene_options_constrained_triangulation_2<CGAL_T2_TYPE> gso(at2, ipm);
-  draw_function_for_t2::compute_elements(at2, graphics_scene, gso);
+  draw_function_for_t2::compute_elements(at2, graphics_scene, gso, &gs_selector);
 }
 
 template <class Gt, class Tds, class Itag>
 void add_to_graphics_scene(const CGAL_T2_TYPE& at2,
                            CGAL::Graphics_scene& graphics_scene)
 {
+  CGAL::Graphics_scene_selector<CGAL_T2_TYPE,
+                  typename CGAL_T2_TYPE::Vertex_handle,
+                  typename CGAL_T2_TYPE::Finite_edges_iterator,
+                  typename CGAL_T2_TYPE::Finite_faces_iterator,
+                  void> gs_selector(false);
+
   Graphics_scene_options_constrained_triangulation_2<CGAL_T2_TYPE> gso(at2);
-  draw_function_for_t2::compute_elements(at2, graphics_scene, gso);
+  draw_function_for_t2::compute_elements(at2, graphics_scene, gso, &gs_selector);
+}
+
+template <class Gt, class Tds, class Itag, class InDomainPmap, class GSSelector>
+void add_to_graphics_scene(const CGAL_T2_TYPE& at2, InDomainPmap ipm,
+                           CGAL::Graphics_scene& graphics_scene,
+                           GSSelector* gs_selector)
+{
+  Graphics_scene_options_constrained_triangulation_2<CGAL_T2_TYPE> gso(at2, ipm);
+  draw_function_for_t2::compute_elements(at2, graphics_scene, gso, gs_selector);
+}
+
+template <class Gt, class Tds, class Itag, class GSSelector>
+void add_to_graphics_scene(const CGAL_T2_TYPE& at2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           GSSelector* gs_selector)
+{
+  Graphics_scene_options_constrained_triangulation_2<CGAL_T2_TYPE> gso(at2);
+  draw_function_for_t2::compute_elements(at2, graphics_scene, gso, gs_selector);
 }
 
 template<class Gt, class Tds, class Itag, class InDomainPmap>
@@ -96,6 +126,26 @@ void draw(const CGAL_T2_TYPE& at2,
 {
   CGAL::Graphics_scene buffer;
   add_to_graphics_scene(at2, buffer);
+  draw_graphics_scene(buffer, title);
+}
+
+template<class Gt, class Tds, class Itag, class InDomainPmap, class GSSelector>
+void draw(const CGAL_T2_TYPE& at2, InDomainPmap ipm,
+          GSSelector *gs_selector,
+          const char *title="Constrained Triangulation_2 Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(at2, ipm, buffer, gs_selector);
+  draw_graphics_scene(buffer, title);
+}
+
+template<class Gt, class Tds, class Itag, class GSSelector>
+void draw(const CGAL_T2_TYPE& at2,
+          GSSelector *gs_selector,
+          const char *title="Constrained Triangulation_2 Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(at2, buffer, gs_selector);
   draw_graphics_scene(buffer, title);
 }
 

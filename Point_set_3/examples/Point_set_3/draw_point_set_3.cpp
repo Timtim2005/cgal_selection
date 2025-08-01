@@ -13,7 +13,13 @@ typedef CGAL::Point_set_3<Point> Point_set;
 
 int main (int argc, char** argv)
 {
-  const std::string filename = argc > 1 ? argv[1] : CGAL::data_file_path("points_3/oni.pwn");
+  CGAL::Graphics_scene_selector<Point_set,
+                                  typename Point_set::Index,
+                                  int,
+                                  int,
+                                  void> gss;
+
+  const std::string filename = argc > 1 ? argv[1] : CGAL::data_file_path("points_3/sphere926.pwn");
 
   Point_set point_set;
   if(!CGAL::IO::read_point_set(filename, point_set))
@@ -22,7 +28,30 @@ int main (int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  CGAL::draw(point_set);
+  CGAL::Graphics_scene gs;
+
+  CGAL::add_to_graphics_scene(point_set, gs, &gss);
+
+  #ifdef CGAL_USE_BASIC_VIEWER
+
+  CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+  if(app)
+  {
+    app.basic_viewer().on_mouse_pressed = [&gss, &point_set] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+    {
+      if(e->button() == Qt::LeftButton)
+      {
+        int dh = basic_viewer->select_face(e, gss);
+        std::cout << dh << std::endl;
+        return true;
+      }
+      return false;
+    };
+
+    app.run();
+  }
+
+  #endif
 
   return EXIT_SUCCESS;
 }
