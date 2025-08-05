@@ -69,11 +69,12 @@ protected:
 namespace draw_function_for_P2T2
 {
 
-template <class P2T2, class GSOptions>
+template <class P2T2, class GSOptions, class GSSelector>
 void compute_vertex(const P2T2 &p2t2,
                     typename P2T2::Periodic_point_iterator pi,
                     CGAL::Graphics_scene& graphics_scene,
-                    const GSOptions& gs_options)
+                    const GSOptions& gs_options,
+                    GSSelector* gs_selector)
 {
   // Construct the point in 9-sheeted covering space and add to viewer
   if(!gs_options.draw_vertex(p2t2, pi))
@@ -81,16 +82,17 @@ void compute_vertex(const P2T2 &p2t2,
 
   if(gs_options.colored_vertex(p2t2, pi))
   { graphics_scene.add_point(p2t2.point(*pi),
-                             gs_options.vertex_color(p2t2, pi)); }
+                             gs_options.vertex_color(p2t2, pi), gs_selector, pi); }
   else
-  { graphics_scene.add_point(p2t2.point(*pi)); }
+  { graphics_scene.add_point(p2t2.point(*pi), gs_selector, pi); }
 }
 
-template <class P2T2, class GSOptions>
+template <class P2T2, class GSOptions, class GSSelector>
 void compute_edge(const P2T2 &p2t2,
                   typename P2T2::Periodic_segment_iterator si,
                   CGAL::Graphics_scene& graphics_scene,
-                  const GSOptions& gs_options)
+                  const GSOptions& gs_options,
+                  GSSelector* gs_selector)
 {
   if(!gs_options.draw_edge(p2t2, si))
   { return; }
@@ -99,16 +101,17 @@ void compute_edge(const P2T2 &p2t2,
   typename P2T2::Segment s(p2t2.segment(*si));
   if(gs_options.colored_edge(p2t2, si))
   { graphics_scene.add_segment(s[0], s[1],
-                               gs_options.edge_color(p2t2, si)); }
+                               gs_options.edge_color(p2t2, si), gs_selector, si); }
   else
-  { graphics_scene.add_segment(s[0], s[1]); }
+  { graphics_scene.add_segment(s[0], s[1], gs_selector, si); }
 }
 
-template <class P2T2, class GSOptions>
+template <class P2T2, class GSOptions, class GSSelector>
 void compute_face(const P2T2 &p2t2,
                   typename P2T2::Periodic_triangle_iterator ti,
                   CGAL::Graphics_scene& graphics_scene,
-                  const GSOptions& gs_options)
+                  const GSOptions& gs_options,
+                  GSSelector* gs_selector)
 {
   if(!gs_options.draw_face(p2t2, ti))
   { return; }
@@ -124,18 +127,21 @@ void compute_face(const P2T2 &p2t2,
   graphics_scene.add_point_in_face(t[0]);
   graphics_scene.add_point_in_face(t[1]);
   graphics_scene.add_point_in_face(t[2]);
-  graphics_scene.face_end();
+  graphics_scene.face_end(gs_selector, ti);
 }
 
-template <class P2T2, class GSOptions>
+template <class P2T2, class GSOptions, class GSSelector>
 void compute_domain(const P2T2& p2t2,
                     CGAL::Graphics_scene& graphics_scene,
-                    const GSOptions& gs_options)
+                    const GSOptions& gs_options,
+                    GSSelector* gs_selector)
 {
   typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 
   Kernel::Iso_rectangle_2 orig_domain =  p2t2.domain();
   std::array<int, 2> covering_sheets = p2t2.number_of_sheets();
+
+  typename P2T2::Periodic_segment_iterator null_segment{};
 
   for(int i = 0; i < covering_sheets[0]; i++)
   {
@@ -148,18 +154,19 @@ void compute_domain(const P2T2& p2t2,
       Kernel::Point_2 p3(orig_domain.xmax(), orig_domain.ymin());
       Kernel::Point_2 p4((orig_domain.max)());
 
-      graphics_scene.add_segment(p1 + shift, p2 + shift, gs_options.domain_color());
-      graphics_scene.add_segment(p1 + shift, p3 + shift, gs_options.domain_color());
-      graphics_scene.add_segment(p2 + shift, p4 + shift, gs_options.domain_color());
-      graphics_scene.add_segment(p3 + shift, p4 + shift, gs_options.domain_color());
+      graphics_scene.add_segment(p1 + shift, p2 + shift, gs_options.domain_color(), gs_selector, null_segment);
+      graphics_scene.add_segment(p1 + shift, p3 + shift, gs_options.domain_color(), gs_selector, null_segment);
+      graphics_scene.add_segment(p2 + shift, p4 + shift, gs_options.domain_color(), gs_selector, null_segment);
+      graphics_scene.add_segment(p3 + shift, p4 + shift, gs_options.domain_color(), gs_selector, null_segment);
     }
   }
 }
 
-template <class P2T2, class GSOptions>
+template <class P2T2, class GSOptions, class GSSelector>
 void compute_elements(const P2T2& p2t2,
                       CGAL::Graphics_scene& graphics_scene,
-                      const GSOptions& gs_options)
+                      const GSOptions& gs_options,
+                      GSSelector* gs_selector)
 {
   // Get the display type, iterate through periodic elements according
   // to the display type
@@ -171,41 +178,33 @@ void compute_elements(const P2T2& p2t2,
   {
     for (typename P2T2::Periodic_point_iterator it=p2t2.periodic_points_begin(it_type);
          it!=p2t2.periodic_points_end(it_type); ++it)
-    { compute_vertex(p2t2, it, graphics_scene, gs_options); }
+    { compute_vertex(p2t2, it, graphics_scene, gs_options, gs_selector); }
   }
 
   if(gs_options.are_edges_enabled())
   {
     for (typename P2T2::Periodic_segment_iterator it=p2t2.periodic_segments_begin(it_type);
          it!=p2t2.periodic_segments_end(it_type); ++it)
-    { compute_edge(p2t2, it, graphics_scene, gs_options); }
+    { compute_edge(p2t2, it, graphics_scene, gs_options, gs_selector); }
   }
 
   if (gs_options.are_faces_enabled())
   {
     for (typename P2T2::Periodic_triangle_iterator it=p2t2.periodic_triangles_begin(it_type);
          it!=p2t2.periodic_triangles_end(it_type); ++it)
-    { compute_face(p2t2, it, graphics_scene, gs_options); }
+    { compute_face(p2t2, it, graphics_scene, gs_options, gs_selector); }
   }
 
   if(gs_options.draw_domain())
   {
     // Compute the (9-sheet covering space) domain of the periodic triangulation
-    compute_domain(p2t2, graphics_scene, gs_options);
+    compute_domain(p2t2, graphics_scene, gs_options, gs_selector);
   }
 }
 
 } // namespace draw_function_for_P2T2
 
 #define CGAL_P2T2_TYPE CGAL::Periodic_2_triangulation_2<Gt, Tds >
-
-template <class Gt, class Tds, class GSOptions>
-void add_to_graphics_scene(const CGAL_P2T2_TYPE& p2t2,
-                           CGAL::Graphics_scene& graphics_scene,
-                           const GSOptions& gs_options)
-{
-  draw_function_for_P2T2::compute_elements(p2t2, graphics_scene, gs_options);
-}
 
 template <class Gt, class Tds>
 void add_to_graphics_scene(const CGAL_P2T2_TYPE& p2t2,
@@ -216,29 +215,72 @@ void add_to_graphics_scene(const CGAL_P2T2_TYPE& p2t2,
      typename CGAL_P2T2_TYPE::Periodic_point_iterator,
      typename CGAL_P2T2_TYPE::Periodic_segment_iterator,
      typename CGAL_P2T2_TYPE::Periodic_triangle_iterator> gs_options;
+  
+  CGAL::Graphics_scene_selector<CGAL_P2T2_TYPE,
+                                typename CGAL_P2T2_TYPE::Periodic_point_iterator,
+                                typename CGAL_P2T2_TYPE::Periodic_segment_iterator,
+                                typename CGAL_P2T2_TYPE::Periodic_triangle_iterator,
+                                void> gs_selector;
 
-  add_to_graphics_scene(p2t2, graphics_scene, gs_options);
+  add_to_graphics_scene(p2t2, graphics_scene, gs_options, &gs_selector);
+}
+
+template <class Gt, class Tds, class GSOptions>
+void add_to_graphics_scene(const CGAL_P2T2_TYPE& p2t2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gs_options)
+{
+  CGAL::Graphics_scene_selector<CGAL_P2T2_TYPE,
+                                typename CGAL_P2T2_TYPE::Periodic_point_iterator,
+                                typename CGAL_P2T2_TYPE::Periodic_segment_iterator,
+                                typename CGAL_P2T2_TYPE::Periodic_triangle_iterator,
+                                void> gs_selector;
+  add_to_graphics_scene(p2t2, graphics_scene, gs_options, &gs_selector);
+}
+
+template <class Gt, class Tds, class GSSelector>
+void add_to_graphics_scene(const CGAL_P2T2_TYPE& p2t2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           GSSelector* gs_selector)
+{
+  CGAL::Graphics_scene_options_periodic_2_triangulation_2
+    <CGAL_P2T2_TYPE,
+     typename CGAL_P2T2_TYPE::Periodic_point_iterator,
+     typename CGAL_P2T2_TYPE::Periodic_segment_iterator,
+     typename CGAL_P2T2_TYPE::Periodic_triangle_iterator> gs_options;
+  add_to_graphics_scene(p2t2, graphics_scene, gs_options, gs_selector);
+}
+
+template <class Gt, class Tds, class GSOptions, class GSSelector>
+void add_to_graphics_scene(const CGAL_P2T2_TYPE& p2t2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gs_options,
+                           GSSelector* gs_selector)
+{
+  draw_function_for_P2T2::compute_elements(p2t2, graphics_scene, gs_options, gs_selector);
 }
 
 // Specialization of draw function
-template<class Gt, class Tds, class GSOptions>
+template<class Gt, class Tds, class GSOptions, class GSSelector>
 void draw(const CGAL_P2T2_TYPE& ap2t2,
           GSOptions& gs_options,
+          GSSelector* gs_selector,
           const char* title="2D Periodic Triangulation Viewer")
 {
   CGAL_USE(ap2t2);
   CGAL_USE(gs_options);
+  CGAL_USE(gs_selector);
   CGAL_USE(title);
 
 #if defined(CGAL_USE_BASIC_VIEWER)
   CGAL::Graphics_scene gs;
-  add_to_graphics_scene(ap2t2, gs, gs_options);
+  add_to_graphics_scene(ap2t2, gs, gs_options, gs_selector);
   CGAL::Qt::QApplication_and_basic_viewer app(gs, title);
   if(app)
   {
     // Here we define the std::function to capture key pressed.
     app.basic_viewer().on_key_pressed=
-      [&ap2t2, &gs, &gs_options] (QKeyEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+      [&ap2t2, &gs, &gs_options, &gs_selector] (QKeyEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
       {
         const ::Qt::KeyboardModifiers modifiers = e->modifiers();
         if ((e->key() == ::Qt::Key_D) && (modifiers == ::Qt::NoButton))
@@ -250,7 +292,7 @@ void draw(const CGAL_P2T2_TYPE& ap2t2,
                                               (gs_options.display_type()==2?"Stored cover":
                                                "Unique cover"))));
           gs.clear();
-          add_to_graphics_scene(ap2t2, gs, gs_options);
+          add_to_graphics_scene(ap2t2, gs, gs_options, gs_selector);
           basic_viewer->redraw();
         }
         else
@@ -270,6 +312,32 @@ void draw(const CGAL_P2T2_TYPE& ap2t2,
 #endif // CGAL_USE_BASIC_VIEWER
 }
 
+template<class Gt, class Tds, class GSSelector>
+void draw(const CGAL_P2T2_TYPE& ap2t2,
+          GSSelector* gs_selector,
+          const char* title="2D Periodic Triangulation Viewer")
+{
+  CGAL::Graphics_scene_options_periodic_2_triangulation_2
+    <CGAL_P2T2_TYPE,
+     typename CGAL_P2T2_TYPE::Periodic_point_iterator,
+     typename CGAL_P2T2_TYPE::Periodic_segment_iterator,
+     typename CGAL_P2T2_TYPE::Periodic_triangle_iterator> gs_options;
+  draw(ap2t2, gs_options, gs_selector, title);
+}
+
+template<class Gt, class Tds, class GSOptions>
+void draw(const CGAL_P2T2_TYPE& ap2t2,
+          GSOptions& gs_options,
+          const char* title="2D Periodic Triangulation Viewer")
+{
+  CGAL::Graphics_scene_selector<CGAL_P2T2_TYPE,
+                                typename CGAL_P2T2_TYPE::Periodic_point_iterator,
+                                typename CGAL_P2T2_TYPE::Periodic_segment_iterator,
+                                typename CGAL_P2T2_TYPE::Periodic_triangle_iterator,
+                                void> gs_selector;
+  draw(ap2t2, gs_options, &gs_selector, title);
+}
+
 template<class Gt, class Tds>
 void draw(const CGAL_P2T2_TYPE& ap2t2,
           const char* title="2D Periodic Triangulation Viewer")
@@ -279,7 +347,14 @@ void draw(const CGAL_P2T2_TYPE& ap2t2,
      typename CGAL_P2T2_TYPE::Periodic_point_iterator,
      typename CGAL_P2T2_TYPE::Periodic_segment_iterator,
      typename CGAL_P2T2_TYPE::Periodic_triangle_iterator> gs_options;
-  draw(ap2t2, gs_options, title);
+
+  CGAL::Graphics_scene_selector<CGAL_P2T2_TYPE,
+                                typename CGAL_P2T2_TYPE::Periodic_point_iterator,
+                                typename CGAL_P2T2_TYPE::Periodic_segment_iterator,
+                                typename CGAL_P2T2_TYPE::Periodic_triangle_iterator,
+                                void> gs_selector;
+
+  draw(ap2t2, gs_options, &gs_selector, title);
 }
 
 #undef CGAL_P2T2_TYPE

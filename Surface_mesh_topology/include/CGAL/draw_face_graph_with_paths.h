@@ -138,12 +138,13 @@ const typename CGAL::Get_traits<Mesh>::Point& get_point
 (const Mesh &mesh, typename Get_map<Mesh, Mesh>::type::Dart_const_descriptor dh)
 { return CGAL::Get_traits<Mesh>::get_point(mesh, dh); }
 
-template <typename Mesh, class GSOptions>
+template <typename Mesh, class GSOptions, class GSSelector>
 void compute_face(const Mesh& mesh,
                   const typename Get_map<Mesh, Mesh>::storage_type& lcc,
                   typename Get_map<Mesh, Mesh>::type::Dart_const_descriptor dh,
                   CGAL::Graphics_scene& graphics_scene,
-                  GSOptions& gso)
+                  GSOptions& gso,
+                  GSSelector* gss)
 {
   if(!gso.are_faces_enabled() || !gso.draw_face(mesh, dh))
   { return; }
@@ -180,12 +181,13 @@ void compute_face(const Mesh& mesh,
   graphics_scene.face_end();
 }
 
-template <typename Mesh, class GSOptions>
+template <typename Mesh, class GSOptions, class GSSelector>
 void compute_edge(const Mesh &mesh,
                   const typename Get_map<Mesh, Mesh>::storage_type& lcc,
                   typename Get_map<Mesh, Mesh>::type::Dart_const_descriptor dh,
                   CGAL::Graphics_scene& graphics_scene,
                   GSOptions& gso,
+                  GSSelector* gss,
                   bool colored=false,
                   const CGAL::IO::Color& color=CGAL::IO::black())
 {
@@ -207,12 +209,13 @@ void compute_edge(const Mesh &mesh,
   }
 }
 
-template <typename Mesh, class GSOptions>
+template <typename Mesh, class GSOptions, class GSSelector>
 void compute_edge(const Mesh &mesh,
                   const typename Get_map<Mesh, Mesh>::storage_type& lcc,
                   typename Get_map<Mesh, Mesh>::type::Dart_const_descriptor dh,
                   CGAL::Graphics_scene& graphics_scene,
                   GSOptions& gso,
+                  GSSelector* gss,
                   typename Get_map<Mesh, Mesh>::type::size_type amark)
 {
   if(!gso.are_edges_enabled() || !gso.draw_edge(mesh, dh))
@@ -231,11 +234,12 @@ void compute_edge(const Mesh &mesh,
   }
 }
 
-template <typename Mesh, class GSOptions>
+template <typename Mesh, class GSOptions, class GSSelector>
 void compute_vertex(const Mesh &mesh,
                     typename Get_map<Mesh, Mesh>::type::Dart_const_descriptor dh,
                     CGAL::Graphics_scene& graphics_scene,
-                    GSOptions& gso)
+                    GSOptions& gso,
+                    GSSelector* gss)
 {
   if(gso.are_vertices_enabled() && gso.draw_vertex(mesh, dh))
   {
@@ -274,10 +278,11 @@ void compute_path(const Mesh &mesh,
   }
 }
 
-template <class Mesh, class GSOptions>
+template <class Mesh, class GSOptions, class GSSelector>
 void compute_elements(const Mesh &mesh,
                       CGAL::Graphics_scene &graphics_scene,
                       const GSOptions &gso,
+                      GSSelector* gss,
                       const std::vector<Surface_mesh_topology::Path_on_surface<Mesh>>& paths,
                       typename Get_map<Mesh, Mesh>::type::size_type mark)
 {

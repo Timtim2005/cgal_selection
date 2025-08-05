@@ -30,7 +30,44 @@ int main(int argc, char* argv[])
     ifs.close();
     assert( vd.is_valid() );
 
-    CGAL::draw(vd);
+    CGAL::Graphics_scene gs;
+    CGAL::Graphics_scene_selector<VD,
+                                  VD::Vertex_iterator,
+                                  VD::Halfedge_iterator,
+                                  VD::Face_iterator,
+                                  void> gss(true);
+    
+    CGAL::add_to_graphics_scene(vd, gs, &gss);
+
+    #ifdef CGAL_USE_BASIC_VIEWER
+
+    CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+    if(app)
+    {
+      app.basic_viewer().on_mouse_pressed = [&gss, &vd] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+      {
+        if(e->button() == Qt::LeftButton)
+        {
+          VD::Face_iterator dh = basic_viewer->select_face(e, gss);
+          if(dh == VD::Face_iterator())
+            return false;
+          VD::Ccb_halfedge_circulator ec_start=dh->ccb();
+          VD::Ccb_halfedge_circulator ec=ec_start;
+          do
+          {
+            std::cout << ec->source()->point() << std::endl;
+          }
+          while (++ec!=ec_start);
+
+          return true;
+        }
+        return false;
+      };
+
+      app.run();
+    }
+
+    #endif
   }
 
   return EXIT_SUCCESS;

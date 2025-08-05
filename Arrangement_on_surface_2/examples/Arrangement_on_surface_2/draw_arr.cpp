@@ -101,23 +101,55 @@ int main() {
 
   std::size_t id(0);
 
- CGAL::Graphics_scene_options<Arrangement_2,
-                              typename Arrangement_2::Vertex_const_handle,
-                              typename Arrangement_2::Halfedge_const_handle,
-                              typename Arrangement_2::Face_const_handle> gso;
- gso.colored_face=[](const Arrangement_2&, Arrangement_2::Face_const_handle) -> bool
- { return true; };
+  CGAL::Graphics_scene_options<Arrangement_2,
+                                typename Arrangement_2::Vertex_const_handle,
+                                typename Arrangement_2::Halfedge_const_handle,
+                                typename Arrangement_2::Face_const_handle> gso;
+  gso.colored_face=[](const Arrangement_2&, Arrangement_2::Face_const_handle) -> bool
+  { return true; };
 
- gso.face_color=[&id](const Arrangement_2& arr, Arrangement_2::Face_const_handle) -> CGAL::IO::Color
- {
-   float h = 360.0f * id++ / arr.number_of_faces();
-   float s = 0.5;
-   float v = 0.5;
-   auto [r, g, b] = hsv_to_rgb(h, s, v);
-   return CGAL::IO::Color(r,g,b);
- };
+  gso.face_color=[&id](const Arrangement_2& arr, Arrangement_2::Face_const_handle) -> CGAL::IO::Color
+  {
+    float h = 360.0f * id++ / arr.number_of_faces();
+    float s = 0.5;
+    float v = 0.5;
+    auto [r, g, b] = hsv_to_rgb(h, s, v);
+    return CGAL::IO::Color(r,g,b);
+  };
 
- CGAL::draw(arr, gso, "hsv colors");
+  CGAL::Graphics_scene_selector<Arrangement_2,
+                                typename Arrangement_2::Vertex_const_handle,
+                                typename Arrangement_2::Halfedge_const_handle,
+                                typename Arrangement_2::Face_const_handle> gss(true);
 
- return EXIT_SUCCESS;
+  CGAL::Graphics_scene gs;
+
+  CGAL::add_to_graphics_scene(arr, gs, gso, &gss);
+
+  #ifdef CGAL_USE_BASIC_VIEWER
+
+  CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+  if(app)
+  {
+    app.basic_viewer().on_mouse_pressed = [&gss] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+    {
+      if(e->button() == Qt::LeftButton)
+      {
+        Arrangement_2::Vertex_const_handle dh = basic_viewer->select_vertex(e, gss);
+        if(dh == Arrangement_2::Vertex_const_handle())
+          return false;
+
+        std::cout << dh->point() << std::endl;
+
+        return true;
+      }
+      return false;
+    };
+
+    app.run();
+  }
+
+  #endif
+
+  return EXIT_SUCCESS;
 }

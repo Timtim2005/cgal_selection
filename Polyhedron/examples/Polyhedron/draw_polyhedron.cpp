@@ -9,10 +9,53 @@ typedef CGAL::Polyhedron_3<Kernel>                       Polyhedron;
 
 int main(int argc, char* argv[])
 {
+  CGAL::Graphics_scene gs;
+
+  CGAL::Graphics_scene_selector<Polyhedron, 
+                               boost::graph_traits<Polyhedron>::vertex_descriptor, 
+                               boost::graph_traits<Polyhedron>::edge_descriptor,
+                               boost::graph_traits<Polyhedron>::face_descriptor,
+                               void> gss;
+
   Polyhedron P;
   std::ifstream in1((argc>1)?argv[1]:CGAL::data_file_path("meshes/cross_quad.off"));
   in1 >> P;
-  CGAL::draw(P);
+  CGAL::add_to_graphics_scene(P, gs, &gss);
+
+  #ifdef CGAL_USE_BASIC_VIEWER
+
+  CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+  if(app)
+  {
+    app.basic_viewer().on_mouse_pressed = [&gss, &P] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+    {
+      if(e->button() == Qt::LeftButton)
+      {
+        auto point_pmap = get(CGAL::vertex_point, P);
+        boost::graph_traits<Polyhedron>::face_descriptor dh = basic_viewer->select_face(e, gss);
+        if(dh == boost::graph_traits<Polyhedron>::null_face())
+          return false;
+        std::cout << "Face vertices:" << std::endl;
+        auto hd = dh->halfedge();
+        const auto first_hd = hd;
+        do
+        {
+          auto v = hd->vertex();
+          std::cout << v->point() << std::endl;
+          hd = hd->next();  
+        }
+        while (hd != first_hd);
+        return true;
+      }
+      return false;
+    };
+
+    app.run();
+  }
+
+  #endif
+
+
 
   return EXIT_SUCCESS;
 }

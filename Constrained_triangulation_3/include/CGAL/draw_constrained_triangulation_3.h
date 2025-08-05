@@ -64,7 +64,10 @@ void draw(const Conforming_constrained_Delaunay_triangulation_3<Traits, Tr>& ccd
     auto [c, index] = *f;
     return colors[c->ccdt_3_data().face_constraint_index(index)];
   };
-  draw(ccdt.triangulation(), options, title);
+
+  CGAL::Graphics_scene_selector<Tr_, Vertex_handle, Edge_descriptor, Facet_descriptor, void> selector;
+
+  draw(ccdt.triangulation(), options, &selector, title);
 }
 
 /*!
@@ -77,7 +80,64 @@ void draw(const Conforming_constrained_Delaunay_triangulation_3<Traits, Tr>& ccd
           const GSOptions& gs_options,
           const char *title="3D Constrained Triangulation")
 {
-  draw(ccdt.triangulation(), gs_options, title);
+  using Tr_ = CGAL::cpp20::remove_cvref_t<decltype(ccdt.triangulation())>;
+  using Vertex_handle = typename Tr_::Vertex_handle;
+  using Cell_handle = typename Tr_::Cell_handle;
+  using Edge_descriptor = typename Tr_::Finite_edges_iterator;
+  using Facet_descriptor = typename Tr_::Finite_facets_iterator;
+
+  CGAL::Graphics_scene_selector<Tr_, Vertex_handle, Edge_descriptor, Facet_descriptor, void> selector;
+
+  draw(ccdt.triangulation(), gs_options, &selector, title);
+}
+
+template <typename Traits, typename Tr, typename GSSelector>
+void draw(const Conforming_constrained_Delaunay_triangulation_3<Traits, Tr>& ccdt,
+          GSSelector* gs_selector,
+          const char *title="3D Constrained Triangulation")
+{
+  using Tr_ = CGAL::cpp20::remove_cvref_t<decltype(ccdt.triangulation())>;
+  using Vertex_handle = typename Tr_::Vertex_handle;
+  using Cell_handle = typename Tr_::Cell_handle;
+  using Edge_descriptor = typename Tr_::Finite_edges_iterator;
+  using Facet_descriptor = typename Tr_::Finite_facets_iterator;
+  using Face_index = CGAL::cpp20::remove_cvref_t<
+      decltype(std::declval<Cell_handle>()->ccdt_3_data().face_constraint_index(0))>;
+  
+  Face_index nb_colors = 0;
+  std::for_each(
+      ccdt.constrained_facets_begin(), ccdt.constrained_facets_end(),
+      [&](const auto& f) {
+        auto [c, index] = f;
+        nb_colors = (std::max)(nb_colors, c->ccdt_3_data().face_constraint_index(index) + 1);
+      });
+  std::vector<CGAL::IO::Color> colors(nb_colors);
+  std::generate(colors.begin(), colors.end(), []() {
+    return CGAL::get_random_color(CGAL::get_default_random());
+  });
+  CGAL::Graphics_scene_options<Tr_, Vertex_handle, Edge_descriptor, Facet_descriptor> options;
+  options.draw_face = [](const Tr_&, Facet_descriptor f) {
+    auto [c, index] = *f;
+    return c->ccdt_3_data().is_facet_constrained(index);
+  };
+  options.colored_face = [](const Tr_&, Facet_descriptor) {
+    return true;
+  };
+  options.face_color = [&](const Tr_&, Facet_descriptor f) {
+    auto [c, index] = *f;
+    return colors[c->ccdt_3_data().face_constraint_index(index)];
+  };
+
+  draw(ccdt.triangulation(), gs_options, gs_selector, title);
+}
+
+template <typename Traits, typename Tr, typename GSOptions, typename GSSelector>
+void draw(const Conforming_constrained_Delaunay_triangulation_3<Traits, Tr>& ccdt,
+          const GSOptions& gs_options,
+          GSSelector* gs_selector,
+          const char *title="3D Constrained Triangulation")
+{
+  draw(ccdt.triangulation(), gs_options, gs_selector, title);
 }
 
 } // End namespace CGAL

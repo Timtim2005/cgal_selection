@@ -39,7 +39,7 @@ namespace CGAL {
 
 namespace draw_function_for_arrangement_2
 {
-  template<typename Arr, typename GSOptions>
+  template<typename Arr, typename GSOptions, typename GSSelector>
   class Draw_arr_tool
   {
   public:
@@ -53,8 +53,8 @@ namespace draw_function_for_arrangement_2
     using Point=typename Arr::Point_2;
     using X_monotone_curve = typename Arr::X_monotone_curve_2;
 
-    Draw_arr_tool(Arr& a_aos, CGAL::Graphics_scene& a_gs, const GSOptions& a_gso):
-      m_aos(a_aos), m_gs(a_gs), m_gso(a_gso)
+    Draw_arr_tool(Arr& a_aos, CGAL::Graphics_scene& a_gs, const GSOptions& a_gso, GSSelector* a_gss):
+      m_aos(a_aos), m_gs(a_gs), m_gso(a_gso), m_gss(a_gss)
     {}
 
     /// Add a face.
@@ -121,7 +121,7 @@ namespace draw_function_for_arrangement_2
         curr = curr->next();
       } while (curr != ext);
 
-      m_gs.face_end();
+      m_gs.face_end(m_gss, circ->face());
     }
 
   /// Compile time dispatching
@@ -188,9 +188,9 @@ namespace draw_function_for_arrangement_2
         Approx_point_3 next(x/l, y/l, z/l);
 
         if(m_gso.colored_edge(m_aos, curr))
-        { m_gs.add_segment(prev, next, m_gso.edge_color(m_aos, curr)); }
+        { m_gs.add_segment(prev, next, m_gso.edge_color(m_aos, curr), m_gss, curr); }
         else
-        { m_gs.add_segment(prev, next); }
+        { m_gs.add_segment(prev, next, m_gss, curr); }
 
         prev = next;
         // m_gs.add_point_in_face(*prev);
@@ -219,9 +219,9 @@ namespace draw_function_for_arrangement_2
         if(m_gso.draw_edge(m_aos, curr))
         {
           if(m_gso.colored_edge(m_aos, curr))
-          { m_gs.add_segment(*prev, *it, m_gso.edge_color(m_aos, curr)); }
+          { m_gs.add_segment(*prev, *it, m_gso.edge_color(m_aos, curr), m_gss, curr); }
           else
-          { m_gs.add_segment(*prev, *it); }
+          { m_gs.add_segment(*prev, *it, m_gss, curr); }
         }
         m_gs.add_point_in_face(*prev);
       }
@@ -234,7 +234,7 @@ namespace draw_function_for_arrangement_2
       const auto* traits = this->m_aos.geometry_traits();
       auto ctr_min = traits->construct_min_vertex_2_object();
       auto ctr_max = traits->construct_max_vertex_2_object();
-      m_gs.add_segment(ctr_min(curve), ctr_max(curve));
+      m_gs.add_segment(ctr_min(curve), ctr_max(curve), m_gss, Halfedge_const_handle());
     }
 
     /// Draw an exact region.
@@ -260,42 +260,44 @@ namespace draw_function_for_arrangement_2
     /// Compile time dispatching
 #if 0
     template <typename T>
-    void draw_point_impl2(const Point& p, T const&, long) { m_gs.add_point(p); }
+    void draw_point_impl2(const Vertex_const_handle vh, T const&, long) { m_gs.add_point(vh->point(), m_gss, vh); }
 
     template <typename T>
-    auto draw_point_impl2(const Point& p, T const& approx, int) ->
-      decltype(approx.operator()(p), void())
-    { m_gs.add_point(approx(p)); }
+    auto draw_point_impl2(const Vertex_const_handle vh, T const& approx, int) ->
+      decltype(approx.operator()(vh->point()), void())
+    { m_gs.add_point(approx(vh->point()), m_gss, vh); }
 
     template <typename T>
-    void draw_point_impl1(const Point& p, T const&, long) { m_gs.add_point(p); }
+    void draw_point_impl1(const Vertex_const_handle vh, T const&, long) { m_gs.add_point(vh->point(), m_gss, vh); }
 
     template <typename T>
-    auto draw_point_impl1(const Point& p, T const& traits, int) ->
+    auto draw_point_impl1(const Vertex_const_handle vh, T const& traits, int) ->
       decltype(traits.approximate_2_object(), void()) {
       using Approximate = typename Gt::Approximate_2;
-      draw_point_impl2<Approximate>(p, traits.approximate_2_object(), true);
+      draw_point_impl2<Approximate>(vh, traits.approximate_2_object(), true);
     }
 #else
     template <typename T>
-    void draw_point_impl1(const Point& p, T const& traits, int,
+    void draw_point_impl1(const Vertex_const_handle vh, T const& traits, int,
                           bool colored, const CGAL::IO::Color& color)
     {
+      const auto& p = vh->point();
       if(colored)
-      { m_gs.add_point(traits.approximate_2_object()(p), color); }
+      { m_gs.add_point(traits.approximate_2_object()(p), color, m_gss, vh); }
       else
-      { m_gs.add_point(traits.approximate_2_object()(p)); }
+      { m_gs.add_point(traits.approximate_2_object()(p), m_gss, vh); }
     }
 #endif
 
     template <typename Kernel_, int AtanX, int AtanY>
     void draw_point_impl1
-    (const Point& p,
+    (const Vertex_const_handle vh,
      Arr_geodesic_arc_on_sphere_traits_2<Kernel_, AtanX, AtanY> const& traits,
      int,
      bool colored,
      const CGAL::IO::Color& color)
     {
+      const auto& p = vh->point();
       auto approx = traits.approximate_2_object();
       using Traits = Arr_geodesic_arc_on_sphere_traits_2<Kernel_, AtanX, AtanY>;
       using Ak = typename Traits::Approximate_kernel;
@@ -307,9 +309,9 @@ namespace draw_function_for_arrangement_2
       auto l = std::sqrt(x*x + y*y + z*z);
       Approx_point_3 p3(x/l, y/l, z/l);
       if(colored)
-      { m_gs.add_point(p3, color); }
+      { m_gs.add_point(p3, color, m_gss, vh); }
       else
-      { m_gs.add_point(p3); }
+      { m_gs.add_point(p3, m_gss, vh); }
     }
 
     /// Draw a point.
@@ -319,10 +321,10 @@ namespace draw_function_for_arrangement_2
       if(m_gso.draw_vertex(m_aos, vh))
       {
         if(m_gso.colored_vertex(m_aos, vh))
-        { draw_point_impl1(vh->point(), *traits, 0, true,
+        { draw_point_impl1(vh, *traits, 0, true,
                            m_gso.vertex_color(m_aos, vh)); }
         else
-        { draw_point_impl1(vh->point(), *traits, 0, false, CGAL::IO::Color()); } // color will be unused
+        { draw_point_impl1(vh, *traits, 0, false, CGAL::IO::Color()); } // color will be unused
       }
     }
 
@@ -548,21 +550,13 @@ namespace draw_function_for_arrangement_2
     Arr& m_aos;
     CGAL::Graphics_scene& m_gs;
     const GSOptions& m_gso;
+    GSSelector* m_gss;
     std::unordered_map<Face_const_handle, bool> m_visited;
   };
 
 } // namespace draw_function_for_arrangement_2
 
 #define CGAL_ARR_TYPE CGAL::Arrangement_on_surface_2<GeometryTraits_2, TopologyTraits>
-
-template <typename GeometryTraits_2, typename TopologyTraits, class GSOptions>
-void add_to_graphics_scene(const CGAL_ARR_TYPE& aos,
-                           CGAL::Graphics_scene& graphics_scene,
-                           const GSOptions& gso)
-{
-  draw_function_for_arrangement_2::Draw_arr_tool dar(aos, graphics_scene, gso);
-  dar.add_elements();
-}
 
 template <typename GeometryTraits_2, typename TopologyTraits>
 void add_to_graphics_scene(const CGAL_ARR_TYPE& aos,
@@ -584,10 +578,73 @@ void add_to_graphics_scene(const CGAL_ARR_TYPE& aos,
     return get_random_color(random);
   };
 
-  add_to_graphics_scene(aos, graphics_scene, gso);
+  CGAL::Graphics_scene_selector<CGAL_ARR_TYPE,
+                               typename CGAL_ARR_TYPE::Vertex_const_handle,
+                               typename CGAL_ARR_TYPE::Halfedge_const_handle,
+                               typename CGAL_ARR_TYPE::Face_const_handle>
+    gss(false);
+
+  add_to_graphics_scene(aos, graphics_scene, gso, &gss);
+}
+
+template <typename GeometryTraits_2, typename TopologyTraits, class GSOptions>
+void add_to_graphics_scene(const CGAL_ARR_TYPE& aos,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gso)
+{
+  CGAL::Graphics_scene_selector<CGAL_ARR_TYPE,
+                               typename CGAL_ARR_TYPE::Vertex_const_handle,
+                               typename CGAL_ARR_TYPE::Halfedge_const_handle,
+                               typename CGAL_ARR_TYPE::Face_const_handle>
+    gss(false);
+
+  add_to_graphics_scene(aos, graphics_scene, gso, &gss);
+}
+
+template <typename GeometryTraits_2, typename TopologyTraits, class GSSelector>
+void add_to_graphics_scene(const CGAL_ARR_TYPE& aos,
+                           CGAL::Graphics_scene& graphics_scene,
+                           GSSelector* gss)
+{
+  CGAL::Graphics_scene_options<CGAL_ARR_TYPE,
+                               typename CGAL_ARR_TYPE::Vertex_const_handle,
+                               typename CGAL_ARR_TYPE::Halfedge_const_handle,
+                               typename CGAL_ARR_TYPE::Face_const_handle>
+    gso;
+  gso.colored_face=[](const CGAL_ARR_TYPE&,
+                      typename CGAL_ARR_TYPE::Face_const_handle) -> bool
+  { return true; };
+
+  gso.face_color=[](const CGAL_ARR_TYPE&,
+                    typename CGAL_ARR_TYPE::Face_const_handle fh) -> CGAL::IO::Color
+  {
+    CGAL::Random random((unsigned int)(std::size_t)(&*fh));
+    return get_random_color(random);
+  };
+
+  add_to_graphics_scene(aos, graphics_scene, gso, gss);
+}
+
+template <typename GeometryTraits_2, typename TopologyTraits, class GSOptions, class GSSelector>
+void add_to_graphics_scene(const CGAL_ARR_TYPE& aos,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gso,
+                           GSSelector* gss)
+{
+  draw_function_for_arrangement_2::Draw_arr_tool dar(aos, graphics_scene, gso, gss);
+  dar.add_elements();
 }
 
 /// Draw an arrangement on surface.
+template <typename GeometryTraits_2, typename TopologyTraits>
+void draw(const CGAL_ARR_TYPE& aos,
+          const char* title = "2D Arrangement on Surface Basic Viewer")
+{
+  CGAL::Graphics_scene graphics_scene;
+  add_to_graphics_scene(aos, graphics_scene);
+  draw_graphics_scene(graphics_scene, title);
+}
+
 template <typename GeometryTraits_2, typename TopologyTraits, class GSOptions>
 void draw(const CGAL_ARR_TYPE& aos, const GSOptions& gso,
           const char* title = "2D Arrangement on Surface Basic Viewer")
@@ -598,14 +655,27 @@ void draw(const CGAL_ARR_TYPE& aos, const GSOptions& gso,
 
 }
 
-template <typename GeometryTraits_2, typename TopologyTraits>
-void draw(const CGAL_ARR_TYPE& aos,
+/// Draw an arrangement on surface.
+template <typename GeometryTraits_2, typename TopologyTraits, class GSOptions, class GSSelector>
+void draw(const CGAL_ARR_TYPE& aos, GSSelector* gss,
           const char* title = "2D Arrangement on Surface Basic Viewer")
 {
   CGAL::Graphics_scene graphics_scene;
-  add_to_graphics_scene(aos, graphics_scene);
+  add_to_graphics_scene(aos, graphics_scene, gss);
+  draw_graphics_scene(graphics_scene, title);
+
+}
+
+template <typename GeometryTraits_2, typename TopologyTraits, class GSOptions, class GSSelector>
+void draw(const CGAL_ARR_TYPE& aos, const GSOptions& gso,
+          GSSelector* gss,
+          const char* title = "2D Arrangement on Surface Basic Viewer")
+{
+  CGAL::Graphics_scene graphics_scene;
+  add_to_graphics_scene(aos, graphics_scene, gso, gss);
   draw_graphics_scene(graphics_scene, title);
 }
+
 
 #undef CGAL_ARR_TYPE
 

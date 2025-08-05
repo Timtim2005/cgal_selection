@@ -41,7 +41,35 @@ int main()
   S.insert(A);
   S.insert(B);
 
-  CGAL::draw(S);
+  CGAL::Graphics_scene gs;
+
+  CGAL::Graphics_scene_selector<Polygon_2, Polygon_2::Vertex_const_iterator, Polygon_2::Vertex_const_iterator, void*, void> gss;
+
+  CGAL::add_to_graphics_scene(S, gs, &gss);
+
+  #ifdef CGAL_USE_BASIC_VIEWER
+
+  CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+  if(app)
+  {
+    app.basic_viewer().on_mouse_pressed = [&gss, &S] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+    {
+      if(e->button() == Qt::LeftButton)
+      {
+        Polygon_2::Vertex_const_iterator dh = basic_viewer->select_vertex(e, gss);
+        if(dh == Polygon_2::Vertex_const_iterator{})
+          return false;
+        
+        std::cout << *dh << std::endl;
+        return true;
+      }
+      return false;
+    };
+
+    app.run();
+  }
+
+  #endif
 
   return 0;
 }

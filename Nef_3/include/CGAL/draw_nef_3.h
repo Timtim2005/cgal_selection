@@ -81,7 +81,7 @@ Local_vector get_vertex_normal(typename Nef_Polyhedron::Vertex_const_handle vh)
 }
 
 // Visitor class to iterate through shell objects
-template <typename Nef_Polyhedron, typename GSOptions>
+template <typename Nef_Polyhedron, typename GSOptions, typename GSSelector>
 class Nef_Visitor {
 
   typedef typename Nef_Polyhedron::Halfedge_const_handle     Halfedge_const_handle;
@@ -96,10 +96,12 @@ class Nef_Visitor {
 public:
   Nef_Visitor(const Nef_Polyhedron&_nef,
               CGAL::Graphics_scene& _graphics_scene,
-              const GSOptions&_gs_options) :
+              const GSOptions&_gs_options,
+              GSSelector* _gs_selector) :
     n_faces(0), n_edges(0),
     graphics_scene(_graphics_scene),
     gs_options(_gs_options),
+    gs_selector(_gs_selector),
     nef(_nef)
   {}
 
@@ -111,9 +113,9 @@ public:
 
     if(gs_options.colored_vertex(nef, vh))
     { graphics_scene.add_point(vh->point(),
-                               gs_options.vertex_color(nef, vh)); }
+                               gs_options.vertex_color(nef, vh), gs_selector, vh); }
     else
-    { graphics_scene.add_point(vh->point()); }
+    { graphics_scene.add_point(vh->point(), gs_selector, vh); }
   }
 
   void visit(Halffacet_const_handle opposite_facet)
@@ -174,7 +176,7 @@ public:
       ++fc;
     }
 
-    graphics_scene.face_end();
+    graphics_scene.face_end(gs_selector, opposite_facet);
     facets_done[f]=true;
     ++n_faces;
   }
@@ -192,9 +194,9 @@ public:
 
     if(gs_options.colored_edge(nef, he))
     { graphics_scene.add_segment(he->source()->point(), he->target()->point(),
-                                 gs_options.edge_color(nef, he)); }
+                                 gs_options.edge_color(nef, he), gs_selector, he); }
     else
-    { graphics_scene.add_segment(he->source()->point(), he->target()->point()); }
+    { graphics_scene.add_segment(he->source()->point(), he->target()->point(), gs_selector, he); }
     edges_done[he]=true;
     ++n_edges;
   }
@@ -209,13 +211,15 @@ protected:
   std::unordered_map<Halfedge_const_handle, bool> edges_done;
   CGAL::Graphics_scene& graphics_scene;
   const GSOptions& gs_options;
+  GSSelector* gs_selector;
   const Nef_Polyhedron& nef;
 };
 
-template <class Nef_Polyhedron, class GSOptions>
+template <class Nef_Polyhedron, class GSOptions, class GSSelector>
 void compute_elements(const Nef_Polyhedron &nef,
                       CGAL::Graphics_scene &graphics_scene,
-                      const GSOptions &gs_options)
+                      const GSOptions &gs_options,
+                      GSSelector *gs_selector)
 {
 
   typedef typename Nef_Polyhedron::Volume_const_iterator      Volume_const_iterator;
@@ -223,7 +227,7 @@ void compute_elements(const Nef_Polyhedron &nef,
   typedef typename Nef_Polyhedron::SFace_const_handle         SFace_const_handle;
 
   Volume_const_iterator c;
-  Nef_Visitor<Nef_Polyhedron, GSOptions> V(nef, graphics_scene, gs_options);
+  Nef_Visitor<Nef_Polyhedron, GSOptions, GSSelector> V(nef, graphics_scene, gs_options, gs_selector);
   CGAL_forall_volumes(c, nef)
   {
     Shell_entry_const_iterator it;
@@ -239,17 +243,6 @@ void compute_elements(const Nef_Polyhedron &nef,
 #define CGAL_NEF3_TYPE Nef_polyhedron_3<Kernel_, Items_, Mark_>
 
 // add_to_graphics_scene
-template <typename Kernel_, typename Items_, typename Mark_,
-          class GSOptions>
-void add_to_graphics_scene(const CGAL_NEF3_TYPE &anef,
-                           CGAL::Graphics_scene &graphics_scene,
-                           const GSOptions &gs_options)
-{
-  draw_function_for_nef_polyhedron::compute_elements(anef,
-                                                     graphics_scene,
-                                                     gs_options);
-}
-
 template <typename Kernel_, typename Items_, typename Mark_>
 void add_to_graphics_scene(const CGAL_NEF3_TYPE &anef,
                            CGAL::Graphics_scene &graphics_scene)
@@ -275,7 +268,79 @@ void add_to_graphics_scene(const CGAL_NEF3_TYPE &anef,
     return get_random_color(random);
   };
 
-  add_to_graphics_scene(anef, graphics_scene, gs_options);
+  CGAL::Graphics_scene_selector<CGAL_NEF3_TYPE,
+                  typename CGAL_NEF3_TYPE::Vertex_const_handle /*vh*/,
+                  typename CGAL_NEF3_TYPE::Halfedge_const_handle /*eh*/,
+                  typename CGAL_NEF3_TYPE::Halffacet_const_handle /*fh*/>
+      gs_selector(false);
+
+  add_to_graphics_scene(anef, graphics_scene, gs_options, &gs_selector);
+}
+
+template <typename Kernel_, typename Items_, typename Mark_,
+          class GSOptions>
+void add_to_graphics_scene(const CGAL_NEF3_TYPE &anef,
+                           CGAL::Graphics_scene &graphics_scene,
+                           const GSOptions &gs_options)
+{
+  CGAL::Graphics_scene_selector<CGAL_NEF3_TYPE,
+                  typename CGAL_NEF3_TYPE::Vertex_const_handle /*vh*/,
+                  typename CGAL_NEF3_TYPE::Halfedge_const_handle /*eh*/,
+                  typename CGAL_NEF3_TYPE::Halffacet_const_handle /*fh*/>
+      gs_selector(false);
+
+  add_to_graphics_scene(anef, graphics_scene, gs_options, &gs_selector);
+}
+
+template <typename Kernel_, typename Items_, typename Mark_,
+          class GSSelector>
+void add_to_graphics_scene(const CGAL_NEF3_TYPE &anef,
+                           CGAL::Graphics_scene &graphics_scene,
+                           GSSelector *gs_selector)
+{
+  // Default graphics view options.
+  Graphics_scene_options<CGAL_NEF3_TYPE,
+                  typename CGAL_NEF3_TYPE::Vertex_const_handle /*vh*/,
+                  typename CGAL_NEF3_TYPE::Halfedge_const_handle /*eh*/,
+                  typename CGAL_NEF3_TYPE::Halffacet_const_handle /*fh*/>
+      gs_options;
+
+  gs_options.colored_face=[](const CGAL_NEF3_TYPE&,
+                             typename CGAL_NEF3_TYPE::Halffacet_const_handle) -> bool
+  { return true; };
+
+  gs_options.face_color=[](const CGAL_NEF3_TYPE&,
+                           typename CGAL_NEF3_TYPE::Halffacet_const_handle fh) -> CGAL::IO::Color
+  {
+    if (fh==nullptr) // use to get the mono color
+    { return CGAL::IO::Color(100, 125, 200); }
+
+    CGAL::Random random((unsigned int)(std::size_t)(&(*fh)));
+    return get_random_color(random);
+  };
+
+  add_to_graphics_scene(anef, graphics_scene, gs_options, gs_selector);
+}
+
+template <typename Kernel_, typename Items_, typename Mark_,
+          class GSOptions, class GSSelector>
+void add_to_graphics_scene(const CGAL_NEF3_TYPE &anef,
+                           CGAL::Graphics_scene &graphics_scene,
+                           const GSOptions &gs_options,
+                           GSSelector *gs_selector)
+{
+  draw_function_for_nef_polyhedron::compute_elements(anef,
+                                                     graphics_scene,
+                                                     gs_options, gs_selector);
+}
+
+template <typename Kernel_, typename Items_, typename Mark_>
+void draw(const CGAL_NEF3_TYPE &anef,
+          const char *title="Nef Polyhedron Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(anef, buffer);
+  draw_graphics_scene(buffer, title);
 }
 
 // Specialization of draw function
@@ -290,12 +355,27 @@ void draw(const CGAL_NEF3_TYPE &anef,
   draw_graphics_scene(buffer, title);
 }
 
-template <typename Kernel_, typename Items_, typename Mark_>
+// Specialization of draw function
+template <typename Kernel_, typename Items_, typename Mark_,
+          class GSSelector>
 void draw(const CGAL_NEF3_TYPE &anef,
+          GSSelector* gs_selector,
           const char *title="Nef Polyhedron Viewer")
 {
   CGAL::Graphics_scene buffer;
-  add_to_graphics_scene(anef, buffer);
+  add_to_graphics_scene(anef, buffer, gs_selector);
+  draw_graphics_scene(buffer, title);
+}
+
+template <typename Kernel_, typename Items_, typename Mark_,
+          class GSOptions, class GSSelector>
+void draw(const CGAL_NEF3_TYPE &anef,
+          const GSOptions &gs_options,
+          GSSelector* gs_selector,
+          const char *title="Nef Polyhedron Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(anef, buffer, gs_options, gs_selector);
   draw_graphics_scene(buffer, title);
 }
 

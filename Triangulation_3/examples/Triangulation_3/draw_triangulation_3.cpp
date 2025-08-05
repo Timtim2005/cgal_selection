@@ -15,7 +15,40 @@ int main()
 
   DT3 dt3(points.begin(), points.end());
 
-  CGAL::draw(dt3);
+  CGAL::Graphics_scene_selector<DT3,
+                       typename DT3::Vertex_handle,
+                       typename DT3::Finite_edges_iterator,
+                       typename DT3::Finite_facets_iterator,
+                       void> gss;
+
+  CGAL::Graphics_scene gs;
+
+  CGAL::add_to_graphics_scene(dt3, gs, &gss);
+
+  #ifdef CGAL_USE_BASIC_VIEWER
+
+  CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+  if(app)
+  {
+    app.basic_viewer().on_mouse_pressed = [&gss, &dt3] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+    {
+      if(e->button() == Qt::LeftButton)
+      {
+        DT3::Finite_facets_iterator fh = basic_viewer->select_face(e, gss);
+        if(fh == DT3::Finite_facets_iterator())
+          return false;
+        std::cout << fh->first->vertex(0)->point() << std::endl;
+        std::cout << fh->first->vertex(1)->point() << std::endl;
+        std::cout << fh->first->vertex(2)->point() << std::endl;
+        return true;
+      }
+      return false;
+    };
+
+    app.run();
+  }
+
+  #endif
 
   return EXIT_SUCCESS;
 }

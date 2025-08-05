@@ -121,20 +121,6 @@ void compute_elements(const FG &fg,
 
 } // draw_function_for_FG
 
-template <class FG, class GSOptions>
-void add_to_graphics_scene_for_fg(const FG &fg,
-                                  CGAL::Graphics_scene &graphics_scene,
-                                  const GSOptions &gs_options)
-{
-  Graphics_scene_selector<FG,
-                          typename boost::graph_traits<FG>::vertex_descriptor,
-                          typename boost::graph_traits<FG>::edge_descriptor,
-                          typename boost::graph_traits<FG>::face_descriptor,
-                          void> gs_selector(false);
-
-  draw_function_for_FG::compute_elements(fg, graphics_scene, gs_options, &gs_selector);
-}
-
 template <class FG>
 void add_to_graphics_scene_for_fg(const FG &fg,
                                   CGAL::Graphics_scene &graphics_scene)
@@ -158,15 +144,28 @@ void add_to_graphics_scene_for_fg(const FG &fg,
     return get_random_color(CGAL::get_default_random());
   };
 
-  add_to_graphics_scene_for_fg(fg, graphics_scene, gs_options);
+  Graphics_scene_selector<FG,
+                          typename boost::graph_traits<FG>::vertex_descriptor,
+                          typename boost::graph_traits<FG>::edge_descriptor,
+                          typename boost::graph_traits<FG>::face_descriptor,
+                          void> gs_selector(false);
+
+  add_to_graphics_scene_for_fg(fg, graphics_scene, gs_options, &gs_selector);
 }
 
-template <class FG, class GSOptions, class GSSelector>
+
+template <class FG, class GSOptions>
 void add_to_graphics_scene_for_fg(const FG &fg,
                                   CGAL::Graphics_scene &graphics_scene,
-                                  const GSOptions &gs_options, GSSelector *gs_selector)
+                                  const GSOptions &gs_options)
 {
-  draw_function_for_FG::compute_elements(fg, graphics_scene, gs_options, gs_selector);
+  Graphics_scene_selector<FG,
+                          typename boost::graph_traits<FG>::vertex_descriptor,
+                          typename boost::graph_traits<FG>::edge_descriptor,
+                          typename boost::graph_traits<FG>::face_descriptor,
+                          void> gs_selector(false);
+
+  draw_function_for_FG::compute_elements(fg, graphics_scene, gs_options, &gs_selector);
 }
 
 template <class FG, class GSSelector>
@@ -194,6 +193,15 @@ void add_to_graphics_scene_for_fg(const FG &fg,
 
   add_to_graphics_scene_for_fg(fg, graphics_scene, gs_options, gs_selector);
 }
+
+template <class FG, class GSOptions, class GSSelector>
+void add_to_graphics_scene_for_fg(const FG &fg,
+                                  CGAL::Graphics_scene &graphics_scene,
+                                  const GSOptions &gs_options, GSSelector *gs_selector)
+{
+  draw_function_for_FG::compute_elements(fg, graphics_scene, gs_options, gs_selector);
+}
+
 
 
 } // End namespace CGAL

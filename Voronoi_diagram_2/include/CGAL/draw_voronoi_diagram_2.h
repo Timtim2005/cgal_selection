@@ -80,19 +80,20 @@ typedef CGAL::Exact_predicates_inexact_constructions_kernel Local_kernel;
 typedef Local_kernel::Point_3  Local_point;
 typedef Local_kernel::Vector_3 Local_vector;
 
-template <class V2, class GSOptions>
+template <class V2, class GSOptions, class GSSelector>
 void compute_vertex(const V2& v2,
                     typename V2::Vertex_iterator vh,
                     CGAL::Graphics_scene& graphics_scene,
-                    const GSOptions& gs_options)
+                    const GSOptions& gs_options,
+                    GSSelector* gs_selector)
 {
   if(!gs_options.draw_vertex(v2, vh))
   { return; }
 
-  if(gs_options.colored_vertex(v2, vh))
-  { graphics_scene.add_point(vh->point(), gs_options.vertex_color(v2, vh)); }
+  if(gs_options.colored_vertex(v2, vh))   
+  { graphics_scene.add_point(vh->point(), gs_options.vertex_color(v2, vh), gs_selector, vh); }
   else
-  { graphics_scene.add_point(vh->point()); }
+  { graphics_scene.add_point(vh->point(), gs_selector, vh); }
 }
 
 template <class V2, class GSOptions>
@@ -102,11 +103,12 @@ void compute_dual_vertex(const V2& /*v2*/,
                          const GSOptions& gs_options)
 { graphics_scene.add_point(vi->point(), gs_options.dual_vertex_color()); }
 
-template <class V2, class GSOptions>
+template <class V2, class GSOptions, class GSSelector>
 void add_segments_and_update_bounding_box(const V2& v2,
                                           typename V2::Halfedge_iterator he,
                                           CGAL::Graphics_scene& graphics_scene,
-                                          GSOptions& gs_options)
+                                          GSOptions& gs_options,
+                                          GSSelector* gs_selector)
 {
   typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
   typedef typename V2::Delaunay_vertex_handle Delaunay_vertex_const_handle;
@@ -118,11 +120,11 @@ void add_segments_and_update_bounding_box(const V2& v2,
       if(gs_options.colored_edge(v2, he))
       {
         graphics_scene.add_segment(he->source()->point(), he->target()->point(),
-                                   gs_options.edge_color(v2, he));
+                                   gs_options.edge_color(v2, he), gs_selector, he);
       }
       else
       {
-        graphics_scene.add_segment(he->source()->point(), he->target()->point());
+        graphics_scene.add_segment(he->source()->point(), he->target()->point(), gs_selector, he);
       }
     }
   }
@@ -265,11 +267,12 @@ void compute_rays_and_bisectors(const V2&,
   }
 }
 
-template <class V2, class GSOptions>
+template <class V2, class GSOptions, class GSSelector>
 void compute_face(const V2& v2,
                   typename V2::Face_iterator fh,
                   CGAL::Graphics_scene& graphics_scene,
-                  const GSOptions& m_gs_options)
+                  const GSOptions& m_gs_options,
+                  GSSelector* gs_selector)
 {
   if(fh->is_unbounded() || !m_gs_options.draw_face(v2, fh))
   { return; }
@@ -285,7 +288,7 @@ void compute_face(const V2& v2,
     graphics_scene.add_point_in_face(ec->source()->point());
   }
   while (++ec!=ec_start);
-  graphics_scene.face_end();
+  graphics_scene.face_end(gs_selector, fh);
 
   // Test: for unbounded faces (??)
   //      else {
@@ -300,10 +303,11 @@ void compute_face(const V2& v2,
   //        }
 }
 
-template <class V2, class GSOptions>
+template <class V2, class GSOptions, class GSSelector>
 void compute_elements(const V2& v2,
                       CGAL::Graphics_scene& graphics_scene,
-                      const GSOptions& gs_options)
+                      const GSOptions& gs_options,
+                      GSSelector* gs_selector)
 {
   if(gs_options.are_vertices_enabled())
   {
@@ -312,7 +316,7 @@ void compute_elements(const V2& v2,
     {
       for (typename V2::Vertex_iterator it=v2.vertices_begin();
            it!=v2.vertices_end(); ++it)
-      { compute_vertex(v2, it, graphics_scene, gs_options); }
+      { compute_vertex(v2, it, graphics_scene, gs_options, gs_selector); }
     }
 
     // Draw the dual vertices
@@ -331,7 +335,7 @@ void compute_elements(const V2& v2,
     for (typename V2::Halfedge_iterator it=v2.halfedges_begin();
          it!=v2.halfedges_end(); ++it)
     { add_segments_and_update_bounding_box(v2, it,
-                                           graphics_scene, gs_options); }
+                                           graphics_scene, gs_options, gs_selector); }
   }
 
   for (typename V2::Halfedge_iterator it=v2.halfedges_begin();
@@ -341,21 +345,13 @@ void compute_elements(const V2& v2,
   if (gs_options.are_faces_enabled())
   {
     for (typename V2::Face_iterator it=v2.faces_begin(); it!=v2.faces_end(); ++it)
-    { compute_face(v2, it, graphics_scene, gs_options); }
+    { compute_face(v2, it, graphics_scene, gs_options, gs_selector); }
   }
 }
 
 } // namespace draw_function_for_v2
 
 #define CGAL_VORONOI_TYPE CGAL::Voronoi_diagram_2 <DG, AT, AP>
-
-template <class DG, class AT, class AP, class GSOptions>
-void add_to_graphics_scene(const CGAL_VORONOI_TYPE &v2,
-                           CGAL::Graphics_scene& graphics_scene,
-                           const GSOptions& m_gs_options)
-{
-  draw_function_for_v2::compute_elements(v2, graphics_scene, m_gs_options);
-}
 
 template <class DG, class AT, class AP>
 void add_to_graphics_scene(const CGAL_VORONOI_TYPE& v2,
@@ -368,17 +364,62 @@ void add_to_graphics_scene(const CGAL_VORONOI_TYPE& v2,
                                 typename CGAL_VORONOI_TYPE::Face_iterator>
     gs_options;
 
-  add_to_graphics_scene(v2, graphics_scene, gs_options);
+  CGAL::Graphics_scene_selector<CGAL_VORONOI_TYPE,
+                        typename CGAL_VORONOI_TYPE::Vertex_iterator,
+                        typename CGAL_VORONOI_TYPE::Halfedge_iterator,
+                        typename CGAL_VORONOI_TYPE::Face_iterator,
+                        void> gs_selector(false);
+
+  add_to_graphics_scene(v2, graphics_scene, gs_options, &gs_selector);
+}
+
+template <class DG, class AT, class AP, class GSOptions>
+void add_to_graphics_scene(const CGAL_VORONOI_TYPE &v2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& m_gs_options)
+{
+  CGAL::Graphics_scene_selector<CGAL_VORONOI_TYPE,
+                        typename CGAL_VORONOI_TYPE::Vertex_iterator,
+                        typename CGAL_VORONOI_TYPE::Halfedge_iterator,
+                        typename CGAL_VORONOI_TYPE::Face_iterator,
+                        void> gs_selector(false);
+
+  add_to_graphics_scene(v2, graphics_scene, m_gs_options, &gs_selector);
+}
+
+template <class DG, class AT, class AP, class GSSelector>
+void add_to_graphics_scene(const CGAL_VORONOI_TYPE &v2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           GSSelector* gs_selector)
+{
+  // Default graphics view options.
+  CGAL::Graphics_scene_options_voronoi_2<CGAL_VORONOI_TYPE,
+                                typename CGAL_VORONOI_TYPE::Vertex_iterator,
+                                typename CGAL_VORONOI_TYPE::Halfedge_iterator,
+                                typename CGAL_VORONOI_TYPE::Face_iterator>
+    gs_options;
+
+  add_to_graphics_scene(v2, graphics_scene, gs_options, gs_selector);
+}
+
+template <class DG, class AT, class AP, class GSOptions, class GSSelector>
+void add_to_graphics_scene(const CGAL_VORONOI_TYPE& v2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gs_options,
+                           GSSelector* gs_selector)
+{
+  draw_function_for_v2::compute_elements(v2, graphics_scene, gs_options, gs_selector);
 }
 
 // Specialization of draw function.
-template<class DG, class AT, class AP, class GSOptions>
+template<class DG, class AT, class AP, class GSOptions, class GSSelector>
 void draw(const CGAL_VORONOI_TYPE& av2,
           GSOptions& gs_options,
+          GSSelector* gs_selector,
           const char *title="2D Voronoi Diagram Basic Viewer")
 {
   CGAL::Graphics_scene buffer;
-  add_to_graphics_scene(av2, buffer, gs_options);
+  add_to_graphics_scene(av2, buffer, gs_options, gs_selector);
 
   CGAL_USE(title);
 
@@ -389,7 +430,7 @@ void draw(const CGAL_VORONOI_TYPE& av2,
   {
     // Here we define the std::function to capture key pressed.
     app.basic_viewer().on_key_pressed=
-      [&av2, &buffer, &gs_options] (QKeyEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+      [&av2, &buffer, &gs_options, &gs_selector] (QKeyEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
       {
         const ::Qt::KeyboardModifiers modifiers = e->modifiers();
         if ((e->key() == ::Qt::Key_R) && (modifiers == ::Qt::NoButton))
@@ -408,7 +449,7 @@ void draw(const CGAL_VORONOI_TYPE& av2,
              arg(gs_options.draw_voronoi_vertices()?"true":"false"));
 
           buffer.clear();
-          draw_function_for_v2::compute_elements(av2, buffer, gs_options);
+          draw_function_for_v2::compute_elements(av2, buffer, gs_options, gs_selector);
           basic_viewer->redraw();
         }
         else if ((e->key() == ::Qt::Key_D) && (modifiers == ::Qt::NoButton))
@@ -418,7 +459,7 @@ void draw(const CGAL_VORONOI_TYPE& av2,
                                        arg(gs_options.draw_dual_vertices()?"true":"false"));
 
           buffer.clear();
-          draw_function_for_v2::compute_elements(av2, buffer, gs_options);
+          draw_function_for_v2::compute_elements(av2, buffer, gs_options, gs_selector);
           basic_viewer->redraw();
         }
         else
@@ -440,6 +481,32 @@ void draw(const CGAL_VORONOI_TYPE& av2,
 #endif // CGAL_USE_BASIC_VIEWER
 }
 
+template<class DG, class AT, class AP, class GSSelector>
+void draw(const CGAL_VORONOI_TYPE& av2,
+          GSSelector* gs_selector,
+          const char *title="2D Voronoi Diagram Basic Viewer")
+{
+  CGAL::Graphics_scene_options_voronoi_2<CGAL_VORONOI_TYPE,
+                                typename CGAL_VORONOI_TYPE::Vertex_iterator,
+                                typename CGAL_VORONOI_TYPE::Halfedge_iterator,
+                                typename CGAL_VORONOI_TYPE::Face_iterator>
+    gs_options;
+  draw(av2, gs_options, gs_selector, title);
+}
+
+template<class DG, class AT, class AP, class GSOptions>
+void draw(const CGAL_VORONOI_TYPE& av2,
+          const GSOptions& gs_options,
+          const char *title="2D Voronoi Diagram Basic Viewer")
+{
+  CGAL::Graphics_scene_selector<CGAL_VORONOI_TYPE,
+                                typename CGAL_VORONOI_TYPE::Vertex_iterator,
+                                typename CGAL_VORONOI_TYPE::Halfedge_iterator,
+                                typename CGAL_VORONOI_TYPE::Face_iterator,
+                                void> gs_selector(false);
+  draw(av2, gs_options, &gs_selector, title);
+}
+
 template<class DG, class AT, class AP>
 void draw(const CGAL_VORONOI_TYPE& av2,
           const char *title="2D Voronoi Diagram Basic Viewer")
@@ -449,7 +516,13 @@ void draw(const CGAL_VORONOI_TYPE& av2,
                                 typename CGAL_VORONOI_TYPE::Halfedge_iterator,
                                 typename CGAL_VORONOI_TYPE::Face_iterator>
     gs_options;
-  draw(av2, gs_options, title);
+
+  CGAL::Graphics_scene_selector<CGAL_VORONOI_TYPE,
+                              typename CGAL_VORONOI_TYPE::Vertex_iterator,
+                              typename CGAL_VORONOI_TYPE::Halfedge_iterator,
+                              typename CGAL_VORONOI_TYPE::Face_iterator,
+                              void> gs_selector(false);
+  draw(av2, gs_options, &gs_selector, title);
 }
 
 #undef CGAL_VORONOI_TYPE

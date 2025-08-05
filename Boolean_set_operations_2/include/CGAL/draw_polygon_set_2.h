@@ -63,10 +63,11 @@ protected:
 
 namespace draw_function_for_boolean_set_2 {
 
-template <typename PS2, class GSOptions>
+template <typename PS2, class GSOptions, class GSSelector>
 void compute_loop(const typename PS2::Polygon_2& p, bool hole,
                   CGAL::Graphics_scene& gs,
-                  const GSOptions& gso)
+                  const GSOptions& gso,
+                  GSSelector* gss)
 {
   if (gso.are_faces_enabled() && hole)
   { gs.add_point_in_face(p.vertex(p.size()-1)); }
@@ -78,9 +79,9 @@ void compute_loop(const typename PS2::Polygon_2& p, bool hole,
   if (gso.are_vertices_enabled() && gso.draw_vertex(p, it))
   {
     if(gso.colored_vertex(p, it))
-    { gs.add_point(*it, gso.vertex_color(p, it)); }
+    { gs.add_point(*it, gso.vertex_color(p, it), gss, it); }
     else
-    { gs.add_point(*it); }
+    { gs.add_point(*it, gss, it); }
   }
 
   if (gso.are_faces_enabled())
@@ -92,17 +93,17 @@ void compute_loop(const typename PS2::Polygon_2& p, bool hole,
     if (gso.are_vertices_enabled() && gso.draw_vertex(p, it))
     { // Add point
       if(gso.colored_vertex(p, it))
-      { gs.add_point(*it, gso.vertex_color(p, it)); }
+      { gs.add_point(*it, gso.vertex_color(p, it), gss, it); }
       else
-      { gs.add_point(*it); }
+      { gs.add_point(*it, gss, it); }
     }
 
     if (gso.are_edges_enabled() && gso.draw_edge(p, prev))
     { // Add segment with previous point
       if(gso.colored_edge(p, prev))
-      { gs.add_segment(*prev, *it, gso.edge_color(p, prev)); }
+      { gs.add_segment(*prev, *it, gso.edge_color(p, prev), gss, it); }
       else
-      { gs.add_segment(*prev, *it); }
+      { gs.add_segment(*prev, *it, gss, it); }
     }
 
     if (gso.are_faces_enabled())
@@ -121,10 +122,11 @@ void compute_loop(const typename PS2::Polygon_2& p, bool hole,
 }
 
 /// Compute the elements of a polygon with holes.
-template <typename PWH, class GSOptions>
+template <typename PWH, class GSOptions, class GSSelector>
 void compute_elements(const PWH& pwh,
                       CGAL::Graphics_scene& gs,
-                      const GSOptions& gso)
+                      const GSOptions& gso,
+                      GSSelector* gss)
 {
   if (!gso.draw_unbounded() && pwh.outer_boundary().is_empty()) return;
 
@@ -142,20 +144,20 @@ void compute_elements(const PWH& pwh,
       pgn.push_back(Pnt(gso.width(), -gso.height()));
       pgn.push_back(Pnt(gso.width(), gso.height()));
       pgn.push_back(Pnt(-gso.width(), gso.height()));
-      draw_function_for_boolean_set_2::compute_loop<PWH>(pgn, false, gs, gso);
+      draw_function_for_boolean_set_2::compute_loop<PWH>(pgn, false, gs, gso, gss);
       point_in_face = &(pgn.vertex(pgn.size()-1));
     }
   }
   else
   {
     const auto& outer_boundary = pwh.outer_boundary();
-    draw_function_for_boolean_set_2::compute_loop<PWH>(outer_boundary, false, gs, gso);
+    draw_function_for_boolean_set_2::compute_loop<PWH>(outer_boundary, false, gs, gso, gss);
     point_in_face = &(outer_boundary.vertex(outer_boundary.size()-1));
   }
 
   for (auto it = pwh.holes_begin(); it != pwh.holes_end(); ++it)
   {
-    draw_function_for_boolean_set_2::compute_loop<PWH>(*it, true, gs, gso);
+    draw_function_for_boolean_set_2::compute_loop<PWH>(*it, true, gs, gso, gss);
     if (gso.are_faces_enabled() && point_in_face && point_in_face!=nullptr)
     { gs.add_point_in_face(*point_in_face); }
   }
@@ -168,7 +170,7 @@ void compute_elements(const PWH& pwh,
 
 #if defined(CGAL_USE_BASIC_VIEWER)
 
-template <typename PolygonSet_2, typename GSOptions>
+template <typename PolygonSet_2, typename GSOptions, typename GSSelector>
 class Polygon_set_2_basic_viewer_qt : public Basic_viewer
 {
   using Base = Basic_viewer;
@@ -180,10 +182,12 @@ class Polygon_set_2_basic_viewer_qt : public Basic_viewer
 public:
   Polygon_set_2_basic_viewer_qt(QWidget* parent, const Ps& ps,
                                 GSOptions& gs_options,
+                                GSSelector* gs_selector,
                                 const char* title = "Basic Polygon_set_2 Viewer") :
     Base(parent, graphics_scene, title),
     m_ps(ps),
-    gso(gs_options)
+    gso(gs_options),
+    gss(gs_selector)
   {
     gso.width(CGAL_BASIC_VIEWER_INIT_SIZE_X);
     gso.height(CGAL_BASIC_VIEWER_INIT_SIZE_Y);
@@ -227,7 +231,7 @@ public:
     std::vector<Pwh> pwhs;
     m_ps.polygons_with_holes(std::back_inserter(pwhs));
     for (const auto& pwh : pwhs)
-    { draw_function_for_boolean_set_2::compute_elements(pwh, graphics_scene, gso); }
+    { draw_function_for_boolean_set_2::compute_elements(pwh, graphics_scene, gso, gss); }
   }
 
   /*! Compute the bounding box.
@@ -259,37 +263,79 @@ private:
 
   Graphics_scene graphics_scene;
   GSOptions& gso;
+  GSSelector* gss;
 };
 
 #endif // CGAL_USE_BASIC_VIEWER
 
 #define CGAL_PS2_TYPE CGAL::Polygon_set_2<T, C, D>
 
-// Specializations of add_to_graphics_scene function
-template<class T, class C, class D, class GSOptions>
-void add_to_graphics_scene(const CGAL_PS2_TYPE& ap2,
-                           CGAL::Graphics_scene& graphics_scene,
-                           const GSOptions& gso)
-{ draw_function_for_boolean_set_2::compute_elements(ap2, graphics_scene, gso); }
-
 template<class T, class C, class D>
 void add_to_graphics_scene(const CGAL_PS2_TYPE& ap2,
                            CGAL::Graphics_scene &graphics_scene)
 {
   CGAL::Graphics_scene_options_polygon_set_2<typename CGAL_PS2_TYPE::Polygon_2,
-                        typename CGAL_PS2_TYPE::Vertex_const_iterator,
-                        typename CGAL_PS2_TYPE::Vertex_const_iterator,
+                        typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                        typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
                         void*> gso;
-  draw_function_for_boolean_set_2::compute_elements(ap2, graphics_scene, gso);
+
+  CGAL::Graphics_scene_selector<typename CGAL_PS2_TYPE::Polygon_2,
+                                 typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                                 typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                                 void*,
+                                 void> gss(false);
+  add_to_graphics_scene(ap2, graphics_scene, gso, &gss);
+}
+
+// Specializations of add_to_graphics_scene function
+template<class T, class C, class D, class GSOptions>
+void add_to_graphics_scene(const CGAL_PS2_TYPE& ap2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gso)
+{
+  CGAL::Graphics_scene_selector<typename CGAL_PS2_TYPE::Polygon_2,
+                                 typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                                 typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                                 void*,
+                                 void> gss(false);
+
+  add_to_graphics_scene(ap2, graphics_scene, gso, &gss);
+}
+
+template<class T, class C, class D, class GSSelector>
+void add_to_graphics_scene(const CGAL_PS2_TYPE& ap2,
+                           CGAL::Graphics_scene &graphics_scene,
+                           GSSelector* gss)
+{
+  CGAL::Graphics_scene_options_polygon_set_2<typename CGAL_PS2_TYPE::Polygon_2,
+                        typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                        typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                        void*> gso;
+  add_to_graphics_scene(ap2, graphics_scene, gso, gss);
+}
+
+// Specializations of add_to_graphics_scene function
+template<class T, class C, class D, class GSOptions, class GSSelector>
+void add_to_graphics_scene(const CGAL_PS2_TYPE& ap2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gso,
+                           GSSelector* gss)
+{
+    std::vector<typename CGAL_PS2_TYPE::Polygon_with_holes_2> pwhs;
+    ap2.polygons_with_holes(std::back_inserter(pwhs));
+    for (const auto& pwh : pwhs)
+    { draw_function_for_boolean_set_2::compute_elements(pwh, graphics_scene, gso, gss); }
 }
 
 // Specialization of draw function.
-template<class T, class C, class D, class GSOptions>
+template<class T, class C, class D, class GSOptions, class GSSelector>
 void draw(const CGAL_PS2_TYPE& ps, GSOptions& gso,
+          GSSelector* gss,
           const char* title = "Polygon_set_2 Basic Viewer")
 {
   CGAL_USE(ps);
   CGAL_USE(gso);
+  CGAL_USE(gss);
   CGAL_USE(title);
 
 #ifdef CGAL_USE_BASIC_VIEWER
@@ -302,12 +348,12 @@ void draw(const CGAL_PS2_TYPE& ps, GSOptions& gso,
   if (! cgal_test_suite)
   {
     using Ps = CGAL::Polygon_set_2<T, C, D>;
-    using Viewer = Polygon_set_2_basic_viewer_qt<Ps, GSOptions>;
+    using Viewer = Polygon_set_2_basic_viewer_qt<Ps, GSOptions, GSSelector>;
     CGAL::Qt::init_ogl_context(4,3);
     int argc = 1;
     const char* argv[2] = {"t2_viewer", nullptr};
     QApplication app(argc, const_cast<char**>(argv));
-    Viewer basic_viewer(app.activeWindow(), ps, gso, title);
+    Viewer basic_viewer(app.activeWindow(), ps, gso, gss, title);
     basic_viewer.show();
     app.exec();
   }
@@ -322,7 +368,38 @@ void draw(const CGAL_PS2_TYPE& ps,
                                              typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
                                              typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
                                void*> gso;
-  draw(ps, gso, title);
+
+  CGAL::Graphics_scene_selector<typename CGAL_PS2_TYPE::Polygon_2,
+                                 typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                                 typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                                 void*,
+                                 void> gss(false);
+  draw(ps, gso, &gss, title);
+}
+
+template<class T, class C, class D, class GSSelector>
+void draw(const CGAL_PS2_TYPE& ps,
+          GSSelector* gss,
+          const char* title = "Polygon_set_2 Basic Viewer")
+{
+  CGAL::Graphics_scene_options_polygon_set_2<typename CGAL_PS2_TYPE::Polygon_2,
+                                             typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                                             typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                               void*> gso;
+  draw(ps, gso, gss, title);
+}
+
+template<class T, class C, class D, class GSOptions>
+void draw(const CGAL_PS2_TYPE& ps,
+          const GSOptions& gso,
+          const char* title = "Polygon_set_2 Basic Viewer")
+{
+  CGAL::Graphics_scene_selector<typename CGAL_PS2_TYPE::Polygon_2,
+                                 typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                                 typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
+                                 void*,
+                                 void> gss(false);
+  draw(ps, gso, &gss, title);
 }
 
 

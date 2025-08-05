@@ -25,10 +25,11 @@ namespace CGAL {
 namespace draw_function_for_t3
 {
 
-template <class T3, class GSOptions>
+template <class T3, class GSOptions, class GSSelector>
 void compute_face(typename T3::Finite_facets_iterator fh,
                   CGAL::Graphics_scene& graphics_scene,
-                  const GSOptions& gs_options, const T3 *t3)
+                  const GSOptions& gs_options, 
+                  GSSelector* gs_selector, const T3 *t3)
 {
   if(!gs_options.draw_face(*t3, fh))
   { return; }
@@ -45,13 +46,13 @@ void compute_face(typename T3::Finite_facets_iterator fh,
   graphics_scene.add_point_in_face(fh->first->vertex((fh->second + 3) % 4)->
                                    point());
 
-  graphics_scene.face_end();
+  graphics_scene.face_end(gs_selector, fh);
 }
 
-template <class T3, class GSOptions>
+template <class T3, class GSOptions, class GSSelector>
 void compute_edge(typename T3::Finite_edges_iterator eh,
                   CGAL::Graphics_scene& graphics_scene,
-                  const GSOptions& gs_options, const T3* t3)
+                  const GSOptions& gs_options, GSSelector* gs_selector, const T3* t3)
 {
   if(!gs_options.draw_edge(*t3, eh))
   { return; }
@@ -60,55 +61,56 @@ void compute_edge(typename T3::Finite_edges_iterator eh,
   {
     graphics_scene.add_segment(eh->first->vertex(eh->second)->point(),
                                eh->first->vertex(eh->third)->point(),
-                               gs_options.edge_color(*t3, eh));
+                               gs_options.edge_color(*t3, eh), gs_selector, eh);
   }
   else
   {
     graphics_scene.add_segment(eh->first->vertex(eh->second)->point(),
-                               eh->first->vertex(eh->third)->point());
+                               eh->first->vertex(eh->third)->point(), gs_selector, eh);
   }
 }
 
-template <class T3, class GSOptions>
+template <class T3, class GSOptions, class GSSelector>
 void compute_vertex(typename T3::Vertex_handle vh,
                     CGAL::Graphics_scene& graphics_scene,
-                    const GSOptions& gs_options, const T3* t3)
+                    const GSOptions& gs_options, GSSelector* gs_selector, const T3* t3)
 {
   if(!gs_options.draw_vertex(*t3, vh))
   { return; }
 
   if(gs_options.colored_vertex(*t3, vh))
   {
-    graphics_scene.add_point(vh->point(), gs_options.vertex_color(*t3, vh));
+    graphics_scene.add_point(vh->point(), gs_options.vertex_color(*t3, vh), gs_selector, vh);
   }
   else
-  { graphics_scene.add_point(vh->point()); }
+  { graphics_scene.add_point(vh->point(), gs_selector, vh); }
 }
 
-template <class T3, class GSOptions>
+template <class T3, class GSOptions, class GSSelector>
 void compute_elements(const T3* t3,
                       CGAL::Graphics_scene& graphics_scene,
-                      const GSOptions& gs_options)
+                      const GSOptions& gs_options,
+                      GSSelector* gs_selector)
 {
   if (gs_options.are_faces_enabled())
   {
     for (typename T3::Finite_facets_iterator it=t3->finite_facets_begin();
          it!=t3->finite_facets_end(); ++it)
-    { compute_face(it, graphics_scene, gs_options, t3); }
+    { compute_face(it, graphics_scene, gs_options, gs_selector, t3); }
   }
 
   if (gs_options.are_edges_enabled())
   {
     for (typename T3::Finite_edges_iterator it=t3->finite_edges_begin();
          it!=t3->finite_edges_end(); ++it)
-    { compute_edge(it, graphics_scene, gs_options, t3); }
+    { compute_edge(it, graphics_scene, gs_options, gs_selector, t3); }
   }
 
   if (gs_options.are_vertices_enabled())
   {
     for (typename T3::Finite_vertices_iterator it=t3->finite_vertices_begin();
          it!=t3->finite_vertices_end(); ++it)
-    { compute_vertex(it, graphics_scene, gs_options, t3); }
+    { compute_vertex(it, graphics_scene, gs_options, gs_selector, t3); }
   }
 }
 
@@ -117,12 +119,13 @@ void compute_elements(const T3* t3,
 #define CGAL_T3_TYPE CGAL::Triangulation_3<Gt, Tds, Lock_data_structure>
 
 template <class Gt, class Tds, class Lock_data_structure,
-          class GSOptions>
+          class GSOptions, class GSSelector>
 void add_to_graphics_scene(const CGAL_T3_TYPE& at3,
                            CGAL::Graphics_scene& graphics_scene,
-                           const GSOptions& gs_options)
+                           const GSOptions& gs_options,
+                           GSSelector* gs_selector)
 {
-  draw_function_for_t3::compute_elements(&at3, graphics_scene, gs_options);
+  draw_function_for_t3::compute_elements(&at3, graphics_scene, gs_options, gs_selector);
 }
 
 template <class Gt, class Tds, class Lock_data_structure>
@@ -151,7 +154,69 @@ void add_to_graphics_scene(const CGAL_T3_TYPE& at3,
       return get_random_color(random);
     };
 
-  add_to_graphics_scene(at3, graphics_scene, gs_options);
+  CGAL::Graphics_scene_selector<CGAL_T3_TYPE,
+                       typename CGAL_T3_TYPE::Vertex_handle,
+                       typename CGAL_T3_TYPE::Finite_edges_iterator,
+                       typename CGAL_T3_TYPE::Finite_facets_iterator,
+                       void>
+    gs_selector(false);
+
+  add_to_graphics_scene(at3, graphics_scene, gs_options, &gs_selector);
+}
+
+template <class Gt, class Tds, class Lock_data_structure,
+          class GSOptions>
+void add_to_graphics_scene(const CGAL_T3_TYPE& at3,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gs_options)
+{
+  CGAL::Graphics_scene_selector<CGAL_T3_TYPE,
+                       typename CGAL_T3_TYPE::Vertex_handle,
+                       typename CGAL_T3_TYPE::Finite_edges_iterator,
+                       typename CGAL_T3_TYPE::Finite_facets_iterator,
+                       void>
+    gs_selector(false);
+
+  add_to_graphics_scene(at3, graphics_scene, gs_options, &gs_selector);
+}
+
+template <class Gt, class Tds, class Lock_data_structure,
+          class GSSelector>
+void add_to_graphics_scene(const CGAL_T3_TYPE& at3,
+                           CGAL::Graphics_scene& graphics_scene,
+                           GSSelector* gs_selector)
+{
+  CGAL::Graphics_scene_options<CGAL_T3_TYPE,
+                       typename CGAL_T3_TYPE::Vertex_handle,
+                       typename CGAL_T3_TYPE::Finite_edges_iterator,
+                       typename CGAL_T3_TYPE::Finite_facets_iterator>
+    gs_options;
+
+  gs_options.colored_face =
+    [](const CGAL_T3_TYPE &, const typename CGAL_T3_TYPE::Finite_facets_iterator) -> bool
+    { return true; };
+
+  gs_options.face_color =
+    [](const CGAL_T3_TYPE &at3, const typename CGAL_T3_TYPE::Finite_facets_iterator fh) -> CGAL::IO::Color
+    {
+      if (fh==at3.finite_facets_end())         // use to get the mono color
+        return CGAL::IO::Color(100, 125, 200); // R G B between 0-255
+
+      CGAL::Random random((unsigned int)((std::size_t)(&*(fh->first)) +
+                                         (std::size_t)(fh->second)));
+
+      return get_random_color(random);
+    };
+
+  add_to_graphics_scene(at3, graphics_scene, gs_options, gs_selector);
+}
+
+template <class Gt, class Tds, class Lock_data_structure>
+void draw(const CGAL_T3_TYPE &at3, const char *title="T3 Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(at3, buffer);
+  draw_graphics_scene(buffer, title);
 }
 
 // Specialization of draw function.
@@ -164,11 +229,22 @@ void draw(const CGAL_T3_TYPE &at3, const GSOptions &gs_options,
   draw_graphics_scene(buffer, title);
 }
 
-template <class Gt, class Tds, class Lock_data_structure>
-void draw(const CGAL_T3_TYPE &at3, const char *title="T3 Basic Viewer")
+// Specialization of draw function.
+template<class Gt, class Tds, class Lock_data_structure, class GSSelector>
+void draw(const CGAL_T3_TYPE &at3, GSSelector* gs_selector,
+          const char *title="T3 Basic Viewer")
 {
   CGAL::Graphics_scene buffer;
-  add_to_graphics_scene(at3, buffer);
+  add_to_graphics_scene(at3, buffer, gs_selector);
+  draw_graphics_scene(buffer, title);
+}
+
+template <class Gt, class Tds, class Lock_data_structure, class GSOptions, class GSSelector>
+void draw(const CGAL_T3_TYPE &at3, const GSOptions &gs_options,
+          GSSelector* gs_selector, const char *title="T3 Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(at3, buffer, gs_options, gs_selector);
   draw_graphics_scene(buffer, title);
 }
 

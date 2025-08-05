@@ -104,10 +104,11 @@ namespace CGAL {
 
 namespace draw_function_for_p2 {
 
-template <class P2, class GSOptions>
+template <class P2, class GSOptions, class GSSelector>
 void compute_elements(const P2& p2,
                       CGAL::Graphics_scene &graphics_scene,
-                      const GSOptions& gso)
+                      const GSOptions& gso,
+                      GSSelector* gss)
 {
   if (p2.is_empty())
     return;
@@ -128,18 +129,18 @@ void compute_elements(const P2& p2,
        gso.draw_vertex(p2, i))
     { // Add vertex
       if(gso.colored_vertex(p2, i))
-      { graphics_scene.add_point(*i, gso.vertex_color(p2, i)); }
+      { graphics_scene.add_point(*i, gso.vertex_color(p2, i), gss, i); }
       else
-      { graphics_scene.add_point(*i); }
+      { graphics_scene.add_point(*i, gss, i); }
     }
 
     if(gso.are_edges_enabled() &&
        gso.draw_edge(p2, prev))
     { // Add edge with previous point
       if(gso.colored_edge(p2, prev))
-      { graphics_scene.add_segment(*prev, *i, gso.edge_color(p2, prev)); }
+      { graphics_scene.add_segment(*prev, *i, gso.edge_color(p2, prev), gss, prev); }
       else
-      { graphics_scene.add_segment(*prev, *i); }
+      { graphics_scene.add_segment(*prev, *i, gss, prev); }
     }
 
     if(gso.are_faces_enabled())
@@ -156,13 +157,6 @@ void compute_elements(const P2& p2,
 
 #define CGAL_P2_TYPE CGAL::Polygon_2<T, C>
 
-// Specializations of add_to_graphics_scene function
-template<class T, class C, class GSOptions>
-void add_to_graphics_scene(const CGAL_P2_TYPE& ap2,
-                           CGAL::Graphics_scene& graphics_scene,
-                           const GSOptions& gso)
-{ draw_function_for_p2::compute_elements(ap2, graphics_scene, gso); }
-
 template<class T, class C>
 void add_to_graphics_scene(const CGAL_P2_TYPE& ap2,
                            CGAL::Graphics_scene &graphics_scene)
@@ -171,7 +165,49 @@ void add_to_graphics_scene(const CGAL_P2_TYPE& ap2,
                         typename CGAL_P2_TYPE::Vertex_const_iterator,
                         typename CGAL_P2_TYPE::Vertex_const_iterator,
                         void*> gso;
-  draw_function_for_p2::compute_elements(ap2, graphics_scene, gso);
+  
+  CGAL::Graphics_scene_selector<CGAL_P2_TYPE,
+                        typename CGAL_P2_TYPE::Vertex_const_iterator,
+                        typename CGAL_P2_TYPE::Vertex_const_iterator,
+                        void*,
+                        void> gss(false);
+  draw_function_for_p2::compute_elements(ap2, graphics_scene, gso, &gss);
+}
+
+// Specializations of add_to_graphics_scene function
+template<class T, class C, class GSOptions>
+void add_to_graphics_scene(const CGAL_P2_TYPE& ap2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions& gso)
+{ 
+  CGAL::Graphics_scene_selector<CGAL_P2_TYPE,
+                        typename CGAL_P2_TYPE::Vertex_const_iterator,
+                        typename CGAL_P2_TYPE::Vertex_const_iterator,
+                        void*,
+                        void> gss(false);
+  draw_function_for_p2::compute_elements(ap2, graphics_scene, gso, &gss);
+}
+
+// Specializations of add_to_graphics_scene function
+template<class T, class C, class GSSelector>
+void add_to_graphics_scene(const CGAL_P2_TYPE& ap2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           GSSelector* gss)
+{ 
+  CGAL::Graphics_scene_options<CGAL_P2_TYPE,
+                        typename CGAL_P2_TYPE::Vertex_const_iterator,
+                        typename CGAL_P2_TYPE::Vertex_const_iterator,
+                        void*> gso;
+  draw_function_for_p2::compute_elements(ap2, graphics_scene, gso, gss);
+}
+
+template<class T, class C, class GSOptions, class GSSelector>
+void add_to_graphics_scene(const CGAL_P2_TYPE& ap2,
+                           CGAL::Graphics_scene &graphics_scene,
+                           const GSOptions& gso,
+                           GSSelector* gss)
+{
+  draw_function_for_p2::compute_elements(ap2, graphics_scene, gso, gss);
 }
 
 // Specialization of draw function.
@@ -191,6 +227,28 @@ void draw(const CGAL_P2_TYPE &ap2,
 {
   CGAL::Graphics_scene buffer;
   add_to_graphics_scene(ap2, buffer, gso);
+  draw_graphics_scene(buffer, title);
+}
+
+// Specialization of draw function.
+template <class T, class C, class GSSelector>
+void draw(const CGAL_P2_TYPE &ap2,
+          GSSelector* gss,
+          const char *title="Polygon_2 Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(ap2, buffer, gss);
+  draw_graphics_scene(buffer, title);
+}
+
+template <class T, class C, class GSOptions, class GSSelector>
+void draw(const CGAL_P2_TYPE &ap2,
+          const GSOptions& gso,
+          GSSelector* gss,
+          const char *title="Polygon_2 Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(ap2, buffer, gso, gss);
   draw_graphics_scene(buffer, title);
 }
 
