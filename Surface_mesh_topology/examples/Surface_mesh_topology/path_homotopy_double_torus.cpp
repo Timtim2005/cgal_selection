@@ -56,10 +56,71 @@ int main(int argc, char** argv)
   std::cout<<"Path p1 (pink) "<<(res3?"IS":"IS NOT")
            <<" homotopic with path p3 (orange)."<<std::endl;
 
+  CGAL::Graphics_scene gs;
+
+  CGAL::Graphics_scene_selector<LCC_3_cmap,
+                                CGAL::Get_map<LCC_3_cmap, LCC_3_cmap>::type::Dart_const_descriptor /*vh*/,
+                                CGAL::Get_map<LCC_3_cmap, LCC_3_cmap>::type::Dart_const_descriptor /*eh*/,
+                                CGAL::Get_map<LCC_3_cmap, LCC_3_cmap>::type::Dart_const_descriptor /*fh*/> gss(true);
+
   if (draw)
   {
     auto cycles={p1, p2, p3};
-    CGAL::draw(lcc, cycles);
+    CGAL::add_to_graphics_scene(lcc, gs, &gss, cycles);
+
+    #ifdef CGAL_USE_BASIC_VIEWER
+
+    CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+    if(app)
+    {
+      app.basic_viewer().on_mouse_pressed = [&gss, &lcc] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+      {
+        if(e->button() == Qt::LeftButton)
+        {
+          bool found = false;
+          LCC_3_cmap::Dart_const_handle fh = basic_viewer->select_face(e, gss);
+          if(fh != LCC_3_cmap::null_descriptor)
+          {
+            found = true;
+            LCC_3_cmap::Dart_const_handle cur = fh;
+            std::cout << "Face: ";
+            do
+            {
+              std::cout << lcc.point(cur) << std::endl;
+              cur = lcc.next(cur);
+            } while (cur != fh);
+            found = true;
+          }
+
+          
+          LCC_3_cmap::Dart_const_handle eh = basic_viewer->select_edge(e, gss);
+          if(eh != LCC_3_cmap::null_descriptor)
+          {
+            LCC_3_cmap::Dart_const_handle cur = eh;
+            std::cout << "Edge: ";
+
+            std::cout << lcc.point(cur) << std::endl;
+            std::cout << lcc.point(lcc.other_extremity(cur)) << std::endl;
+            found = true;
+          }
+
+          LCC_3_cmap::Dart_const_handle vh = basic_viewer->select_vertex(e, gss);
+          if(vh != LCC_3_cmap::null_descriptor)
+          {
+            std::cout << "Vertex: ";
+            std::cout << lcc.point(vh) << std::endl;
+            found = true;
+          }
+
+          return found;
+        }
+        return false;
+      };
+
+      app.run();
+    }
+
+    #endif
   }
 
   return EXIT_SUCCESS;

@@ -11,10 +11,9 @@ int main(int argc, char* argv[]) {
   CGAL::Graphics_scene gs;
 
   CGAL::Graphics_scene_selector<Triangulation,
-                  typename Triangulation::Vertex_handle,
-                  typename Triangulation::Finite_edges_iterator,
-                  typename Triangulation::Finite_faces_iterator,
-                  void> gs_selector;
+                  Triangulation::Vertex_handle,
+                  Triangulation::Finite_edges_iterator,
+                  Triangulation::Finite_faces_iterator> gs_selector;
 
   std::ifstream in((argc>1)?argv[1]:"data/triangulation_prog1.cin");
   std::istream_iterator<Point> begin(in);
@@ -34,14 +33,38 @@ int main(int argc, char* argv[]) {
     {
       if(e->button() == Qt::LeftButton)
       {
-        auto dh = basic_viewer->select_face(e, gs_selector);
-        if(dh != Triangulation::Finite_faces_iterator())
+        bool found = false;
+        Triangulation::Finite_faces_iterator dh = basic_viewer->select_face(e, gs_selector);
+        auto invalid_face = Triangulation::Finite_faces_iterator();
+        if(dh != invalid_face)
         {
+          std::cout << "Face : ";
           std::cout << dh->vertex(0)->point() << std::endl;
           std::cout << dh->vertex(1)->point() << std::endl;
           std::cout << dh->vertex(2)->point() << std::endl;
-          return true;
+          found = true;
         }
+
+        Triangulation::Finite_edges_iterator eh = basic_viewer->select_edge(e, gs_selector);
+        Triangulation::Finite_edges_iterator bh = basic_viewer->select_edge(e, gs_selector);
+        if(eh == bh)
+        {
+          std::cout << "Edge : ";
+          std::cout << eh->first->vertex(eh->first->cw(eh->second))->point() << std::endl;
+          std::cout << eh->first->vertex(eh->first->ccw(eh->second))->point() << std::endl;
+          found = true;
+        }
+        
+        Triangulation::Vertex_handle vh = basic_viewer->select_vertex(e, gs_selector);
+        auto invalid_vertex = Triangulation::Vertex_handle();
+        if(vh != invalid_vertex)
+        {
+          std::cout << "Vertex : ";
+          std::cout << vh->point() << std::endl;
+          found = true;
+        }
+
+        return found;
       }
       return false;
     };

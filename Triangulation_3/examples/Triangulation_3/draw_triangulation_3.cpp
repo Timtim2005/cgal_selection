@@ -34,13 +34,31 @@ int main()
     {
       if(e->button() == Qt::LeftButton)
       {
+        bool found = false;
         DT3::Finite_facets_iterator fh = basic_viewer->select_face(e, gss);
-        if(fh == DT3::Finite_facets_iterator())
-          return false;
-        std::cout << fh->first->vertex(0)->point() << std::endl;
-        std::cout << fh->first->vertex(1)->point() << std::endl;
-        std::cout << fh->first->vertex(2)->point() << std::endl;
-        return true;
+        if(fh != DT3::Finite_facets_iterator())
+        {
+          found = true;
+          std::cout << fh->first->vertex(0)->point() << std::endl;
+          std::cout << fh->first->vertex(1)->point() << std::endl;
+          std::cout << fh->first->vertex(2)->point() << std::endl;
+        }
+
+        DT3::Finite_edges_iterator ed = basic_viewer->select_edge(e, gss);
+        if(ed != DT3::Finite_edges_iterator())
+        {
+          found = true;
+          std::cout << ed->first->vertex(ed->second)->point() << " - "
+                    << ed->first->vertex(ed->third)->point() << std::endl;
+        }
+        
+        DT3::Vertex_handle vh = basic_viewer->select_vertex(e, gss);
+        if(vh != DT3::Vertex_handle())
+        {
+          found = true;
+          std::cout << vh->point() << std::endl;
+        }
+        return found;
       }
       return false;
     };

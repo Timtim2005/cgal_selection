@@ -48,18 +48,47 @@ int main(int argc, char* argv[])
       {
         if(e->button() == Qt::LeftButton)
         {
-          VD::Face_iterator dh = basic_viewer->select_face(e, gss);
-          if(dh == VD::Face_iterator())
-            return false;
-          VD::Ccb_halfedge_circulator ec_start=dh->ccb();
-          VD::Ccb_halfedge_circulator ec=ec_start;
-          do
+          bool found = false;
+          VD::Face_iterator fh = basic_viewer->select_face(e, gss);
+          if(fh != VD::Face_iterator{})
           {
-            std::cout << ec->source()->point() << std::endl;
+            if(!fh->is_unbounded())
+            {
+              found = true;
+              std::cout << "Face: ";
+              VD::Ccb_halfedge_circulator ec_start=fh->ccb();
+              VD::Ccb_halfedge_circulator ec=ec_start;
+              do
+              {
+                std::cout << ec->source()->point() << std::endl;
+              }
+              while (++ec!=ec_start);
+            }
           }
-          while (++ec!=ec_start);
 
-          return true;
+          VD::Halfedge_iterator eh = basic_viewer->select_edge(e, gss);
+          VD::Halfedge_iterator bh = basic_viewer->select_edge(e, gss);
+          if(eh == bh)
+          {
+            std::cout << "Iterator is segment: " << (eh->is_segment() ? "yes" : "no") << std::endl;
+            std::cout << "Has source: " << (eh->has_source() ? "yes" : "no") << std::endl;
+            std::cout << "Has target: " << (eh->has_target() ? "yes" : "no") << std::endl;
+            if(eh->is_segment())
+            {
+              found = true;
+              std::cout << "Edge: ";
+              std::cout << eh->source()->point() << " to " << eh->target()->point() << std::endl;
+            }
+          }
+
+          VD::Vertex_iterator vh = basic_viewer->select_vertex(e, gss);
+          if(vh != VD::Vertex_iterator())
+          {
+            found = true;
+            std::cout << "Vertex: " << vh->point() << std::endl;
+          }
+
+          return found;
         }
         return false;
       };

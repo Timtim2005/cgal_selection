@@ -848,7 +848,7 @@ template<typename GSSelector>
     CGAL::qglviewer::Vec finalV1, finalV2, finalV3;
     CGAL::qglviewer::Vec v1, v2, v3;
     int id = 0;
-    int finalId = 0;
+    u_int finalId = UINT_MAX;
     int faceId = -1;
     int nb_if = 0;
     float depth = 1.0f;
@@ -912,10 +912,9 @@ template<typename GSSelector>
     if(faceId != -1)
     {
       std::cout << "Selected face ID: " << faceId << std::endl;
-      return gss.get_face_descriptor(faceId);
     }
 
-    return typename GSSelector::face_descriptor();
+    return gss.get_face_descriptor(faceId);
   }
 
 template<typename GSSelector>
@@ -926,7 +925,7 @@ template<typename GSSelector>
     float minAvgDepth = 1.0;
     CGAL::qglviewer::Vec finalLineP, finalLineQ;
     u_int id = 0;
-    u_int finalId = -1;
+    u_int finalId = UINT_MAX;
     float depth = 1.0f;
     glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
 
@@ -967,12 +966,7 @@ template<typename GSSelector>
       }
     }
 
-    if(finalId != -1)
-    {
-      return gss.get_edge_descriptor(finalId);
-    }
-
-    return typename GSSelector::edge_descriptor();
+    return gss.get_edge_descriptor(finalId);
   }
 template<typename GSSelector>
   typename GSSelector::vertex_descriptor select_vertex(QMouseEvent* event, GSSelector gss) // ADDED
@@ -980,7 +974,7 @@ template<typename GSSelector>
     // THIS IS FOR POINTS
     this->makeCurrent();
     int id = 0;
-    int finalId = -1;
+    u_int finalId = UINT_MAX;
     CGAL::qglviewer::Vec finalPoint = CGAL::qglviewer::Vec(0, 0, 0);
     CGAL::qglviewer::Vec finalVecScreen = CGAL::qglviewer::Vec(0, 0, 1);
     float depth = 1.0f;
@@ -1021,12 +1015,7 @@ template<typename GSSelector>
       }
     }
 
-    if(finalId != -1)
-    {
-      return gss.get_vertex_descriptor(finalId);
-    }
-  
-    return typename GSSelector::vertex_descriptor();
+    return gss.get_vertex_descriptor(finalId);
   }
 
 protected:

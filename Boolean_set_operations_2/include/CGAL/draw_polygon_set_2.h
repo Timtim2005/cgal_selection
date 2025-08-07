@@ -115,9 +115,9 @@ void compute_loop(const typename PS2::Polygon_2& p, bool hole,
   if (gso.are_edges_enabled() && gso.draw_edge(p, prev))
   {
     if(gso.colored_edge(p, prev))
-    { gs.add_segment(*prev, *(p.vertices_begin()), gso.edge_color(p, prev)); }
+    { gs.add_segment(*prev, *(p.vertices_begin()), gso.edge_color(p, prev), gss, prev); }
     else
-    { gs.add_segment(*prev, *(p.vertices_begin())); }
+    { gs.add_segment(*prev, *(p.vertices_begin()), gss, prev); }
   }
 }
 
@@ -139,7 +139,8 @@ void compute_elements(const PWH& pwh,
   {
     if(gso.width()!=0 && gso.height()!=0)
     {
-      typename PWH::Polygon_2 pgn;
+      static typename PWH::Polygon_2 pgn;
+      pgn.clear();
       pgn.push_back(Pnt(-gso.width(), -gso.height()));
       pgn.push_back(Pnt(gso.width(), -gso.height()));
       pgn.push_back(Pnt(gso.width(), gso.height()));
@@ -228,7 +229,8 @@ public:
   virtual void add_elements()
   {
     graphics_scene.clear();
-    std::vector<Pwh> pwhs;
+    static std::vector<Pwh> pwhs;
+    pwhs.clear();
     m_ps.polygons_with_holes(std::back_inserter(pwhs));
     for (const auto& pwh : pwhs)
     { draw_function_for_boolean_set_2::compute_elements(pwh, graphics_scene, gso, gss); }
@@ -282,8 +284,7 @@ void add_to_graphics_scene(const CGAL_PS2_TYPE& ap2,
   CGAL::Graphics_scene_selector<typename CGAL_PS2_TYPE::Polygon_2,
                                  typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
                                  typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
-                                 void*,
-                                 void> gss(false);
+                                 void*> gss(false);
   add_to_graphics_scene(ap2, graphics_scene, gso, &gss);
 }
 
@@ -296,8 +297,7 @@ void add_to_graphics_scene(const CGAL_PS2_TYPE& ap2,
   CGAL::Graphics_scene_selector<typename CGAL_PS2_TYPE::Polygon_2,
                                  typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
                                  typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
-                                 void*,
-                                 void> gss(false);
+                                 void*> gss(false);
 
   add_to_graphics_scene(ap2, graphics_scene, gso, &gss);
 }
@@ -321,7 +321,8 @@ void add_to_graphics_scene(const CGAL_PS2_TYPE& ap2,
                            const GSOptions& gso,
                            GSSelector* gss)
 {
-    std::vector<typename CGAL_PS2_TYPE::Polygon_with_holes_2> pwhs;
+    static std::vector<typename CGAL_PS2_TYPE::Polygon_with_holes_2> pwhs;
+    pwhs.clear();
     ap2.polygons_with_holes(std::back_inserter(pwhs));
     for (const auto& pwh : pwhs)
     { draw_function_for_boolean_set_2::compute_elements(pwh, graphics_scene, gso, gss); }
@@ -372,8 +373,7 @@ void draw(const CGAL_PS2_TYPE& ps,
   CGAL::Graphics_scene_selector<typename CGAL_PS2_TYPE::Polygon_2,
                                  typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
                                  typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
-                                 void*,
-                                 void> gss(false);
+                                 void*> gss(false);
   draw(ps, gso, &gss, title);
 }
 
@@ -397,8 +397,7 @@ void draw(const CGAL_PS2_TYPE& ps,
   CGAL::Graphics_scene_selector<typename CGAL_PS2_TYPE::Polygon_2,
                                  typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
                                  typename CGAL_PS2_TYPE::Polygon_2::Vertex_const_iterator,
-                                 void*,
-                                 void> gss(false);
+                                 void*> gss(false);
   draw(ps, gso, &gss, title);
 }
 

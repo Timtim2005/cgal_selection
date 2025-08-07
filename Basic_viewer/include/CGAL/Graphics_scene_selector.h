@@ -47,7 +47,7 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
 
   vertex_descriptor get_vertex_descriptor(std::size_t index) const
   {
-    if (index >= m_vertices_index.size() || !enabled)
+    if (index >= m_vertices_index.size() || index < 0 || !enabled)
     {
       return vertex_descriptor(); // Return an invalid descriptor
     }
@@ -56,7 +56,7 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
 
   edge_descriptor get_edge_descriptor(std::size_t index) const
   {
-    if (index >= m_edges_index.size() || !enabled)
+    if (index >= m_edges_index.size() || index < 0 || !enabled)
     {
       return edge_descriptor(); // Return an invalid descriptor
     }
@@ -65,7 +65,7 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
 
   face_descriptor get_face_descriptor(std::size_t index) const
   {
-    if (index >= m_faces_index.size() || !enabled)
+    if (index >= m_faces_index.size() || index < 0 || !enabled)
     {
       return face_descriptor(); // Return an invalid descriptor
     }

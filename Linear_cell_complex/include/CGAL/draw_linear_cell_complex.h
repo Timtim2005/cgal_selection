@@ -64,7 +64,7 @@ void compute_face(const LCC& lcc,
                   typename LCC::Dart_const_handle voldh,
                   CGAL::Graphics_scene& graphics_scene,
                   const GSOptionsLCC& gso,
-                  GSSelector* gss = nullptr) // ADDED
+                  GSSelector* gss) // ADDED
 {
   if(!gso.are_faces_enabled() || !gso.draw_face(lcc, dh))
   { return; }
@@ -104,7 +104,7 @@ void compute_edge(const LCC& lcc,
                   typename LCC::Dart_const_handle dh,
                   CGAL::Graphics_scene& graphics_scene,
                   const GSOptions& gso,
-                  GSSelector* gss = nullptr) // ADDED
+                  GSSelector* gss) // ADDED
 {
   if(!gso.are_edges_enabled() || !gso.draw_edge(lcc, dh))
   { return; }
@@ -129,7 +129,7 @@ void compute_vertex(const LCC& lcc,
                     typename LCC::Dart_const_handle dh,
                     CGAL::Graphics_scene& graphics_scene,
                     const GSOptionsLCC& gso,
-                    GSSelector* gss = nullptr) // ADDED
+                    GSSelector* gss) // ADDED
 {
   if (!gso.are_vertices_enabled() || !gso.draw_vertex(lcc, dh))
   { return; }
@@ -167,7 +167,7 @@ template <class LCC, class GSOptions, class GSSelector>
 void compute_elements(const LCC& lcc,
                       CGAL::Graphics_scene& graphics_scene,
                       const GSOptions& gso,
-                      GSSelector* gss = nullptr) // ADDED
+                      GSSelector* gss) // ADDED
 {
   typename LCC::size_type markvolumes = lcc.get_new_mark();
   typename LCC::size_type markfaces = lcc.get_new_mark();
@@ -260,7 +260,7 @@ template<unsigned int d_, unsigned int ambient_dim, class Traits_,
 void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
                            CGAL::Graphics_scene& graphics_scene,
                            const GSOptions& gso,
-                           GSSelector* gss = nullptr) // ADDED
+                           GSSelector* gss) // ADDED
 {
   draw_function_for_lcc::compute_elements(static_cast<const Refs&>(alcc),
                                           graphics_scene, gso, gss);
@@ -293,7 +293,7 @@ template<unsigned int d_, unsigned int ambient_dim, class Traits_,
          class GSSelector>
 void add_to_graphics_scene(const CGAL_LCC_TYPE& alcc,
                            CGAL::Graphics_scene& graphics_scene,
-                           GSSelector* gss = nullptr) // ADDED
+                           GSSelector* gss) // ADDED
 {
   CGAL::Graphics_scene_options<CGAL_LCC_TYPE,
                                typename CGAL_LCC_TYPE::Dart_const_handle,
@@ -382,10 +382,10 @@ template<unsigned int d_, unsigned int ambient_dim, class Traits_,
          class Refs, class Storage_,
          class GSOptions, class GSSelector>
 void draw(const CGAL_LCC_TYPE& alcc, const GSOptions& gso,
-          GSSelector& gss, const char *title="LCC Basic Viewer")
+          GSSelector* gss, const char *title="LCC Basic Viewer")
 {
   CGAL::Graphics_scene buffer;
-  add_to_graphics_scene(alcc, buffer, gso, &gss);
+  add_to_graphics_scene(alcc, buffer, gso, gss);
   draw_graphics_scene(buffer, title);
 }
 
@@ -394,10 +394,10 @@ template<unsigned int d_, unsigned int ambient_dim, class Traits_,
          template <unsigned int, class, class, class, class> class Map,
          class Refs, class Storage_,
          class GSSelector>
-void draw(const CGAL_LCC_TYPE& alcc, GSSelector& gss, const char *title="LCC Basic Viewer")
+void draw(const CGAL_LCC_TYPE& alcc, GSSelector* gss, const char *title="LCC Basic Viewer")
 {
   CGAL::Graphics_scene buffer;
-  add_to_graphics_scene(alcc, buffer, &gss);
+  add_to_graphics_scene(alcc, buffer, gss);
   draw_graphics_scene(buffer, title);
 }
 
