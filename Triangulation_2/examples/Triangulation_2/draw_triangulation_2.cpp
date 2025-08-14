@@ -34,9 +34,9 @@ int main(int argc, char* argv[]) {
       if(e->button() == Qt::LeftButton)
       {
         bool found = false;
-        Triangulation::Finite_faces_iterator dh = basic_viewer->select_face(e, gs_selector);
-        auto invalid_face = Triangulation::Finite_faces_iterator();
-        if(dh != invalid_face)
+        bool selected = false;
+        Triangulation::Finite_faces_iterator dh = basic_viewer->select_face(e, gs_selector, selected);
+        if(selected)
         {
           std::cout << "Face : ";
           std::cout << dh->vertex(0)->point() << std::endl;
@@ -45,26 +45,24 @@ int main(int argc, char* argv[]) {
           found = true;
         }
 
-        Triangulation::Finite_edges_iterator eh = basic_viewer->select_edge(e, gs_selector);
-        Triangulation::Finite_edges_iterator bh = basic_viewer->select_edge(e, gs_selector);
-        if(eh == bh)
+        Triangulation::Finite_edges_iterator eh = basic_viewer->select_edge(e, gs_selector, selected);
+        if(selected)
         {
           std::cout << "Edge : ";
           std::cout << eh->first->vertex(eh->first->cw(eh->second))->point() << std::endl;
           std::cout << eh->first->vertex(eh->first->ccw(eh->second))->point() << std::endl;
           found = true;
         }
-        
-        Triangulation::Vertex_handle vh = basic_viewer->select_vertex(e, gs_selector);
-        auto invalid_vertex = Triangulation::Vertex_handle();
-        if(vh != invalid_vertex)
+
+        Triangulation::Vertex_handle vh = basic_viewer->select_vertex(e, gs_selector, selected);
+        if(selected)
         {
           std::cout << "Vertex : ";
           std::cout << vh->point() << std::endl;
           found = true;
         }
 
-        return found;
+        //return found;
       }
       return false;
     };

@@ -31,21 +31,39 @@ int main(int argc, char* argv[])
     {
       if(e->button() == Qt::LeftButton)
       {
+        bool found = false;
         auto point_pmap = get(CGAL::vertex_point, P);
-        boost::graph_traits<Polyhedron>::face_descriptor dh = basic_viewer->select_face(e, gss);
-        if(dh == boost::graph_traits<Polyhedron>::null_face())
-          return false;
-        std::cout << "Face vertices:" << std::endl;
-        auto hd = dh->halfedge();
-        const auto first_hd = hd;
-        do
+        boost::graph_traits<Polyhedron>::face_descriptor fh = basic_viewer->select_face(e, gss);
+        if(fh != boost::graph_traits<Polyhedron>::null_face())
         {
-          auto v = hd->vertex();
-          std::cout << v->point() << std::endl;
-          hd = hd->next();  
+          std::cout << "Face vertices:" << std::endl;
+          auto hd = fh->halfedge();
+          const auto first_hd = hd;
+          do
+          {
+            auto v = hd->vertex();
+            std::cout << v->point() << std::endl;
+            hd = hd->next();
+          } while (hd != first_hd);
+          found = true;
         }
-        while (hd != first_hd);
-        return true;
+
+        boost::graph_traits<Polyhedron>::edge_descriptor eh = basic_viewer->select_edge(e, gss);
+        if(eh != boost::graph_traits<Polyhedron>::edge_descriptor())
+        {
+          std::cout << get(point_pmap, source(halfedge(eh, P), P)) << std::endl;
+          std::cout << get(point_pmap, target(halfedge(eh, P), P)) << std::endl;
+          found = true;
+        }
+
+        boost::graph_traits<Polyhedron>::vertex_descriptor vh = basic_viewer->select_vertex(e, gss);
+        if(vh != boost::graph_traits<Polyhedron>::null_vertex())
+        {
+          std::cout << get(point_pmap, vh) << std::endl;
+          found = true;
+        }
+
+        return found;
       }
       return false;
     };

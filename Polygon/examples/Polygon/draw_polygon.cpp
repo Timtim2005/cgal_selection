@@ -35,11 +35,23 @@ int main()
     {
       if(e->button() == Qt::LeftButton)
       {
-        Polygon_2::Vertex_const_iterator dh = basic_viewer->select_edge(e, gss);
-        if(dh == Polygon_2::Vertex_const_iterator())
-          return false;
-        std::cout << *dh << std::endl;
-        return true;
+        bool found = false;
+        Polygon_2::Vertex_const_iterator eh = basic_viewer->select_edge(e, gss);
+        if(eh != Polygon_2::Vertex_const_iterator())
+        {
+          std::cout << *eh << std::endl;
+          std::cout << *--eh << std::endl;
+          found = true;
+        }
+      
+        Polygon_2::Vertex_const_iterator vh = basic_viewer->select_vertex(e, gss);
+        if(vh != Polygon_2::Vertex_const_iterator())
+        {
+          std::cout << *vh << std::endl;
+          found = true;
+        }
+
+        return found;
       }
       return false;
     };

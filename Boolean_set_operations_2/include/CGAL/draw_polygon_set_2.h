@@ -115,9 +115,9 @@ void compute_loop(const typename PS2::Polygon_2& p, bool hole,
   if (gso.are_edges_enabled() && gso.draw_edge(p, prev))
   {
     if(gso.colored_edge(p, prev))
-    { gs.add_segment(*prev, *(p.vertices_begin()), gso.edge_color(p, prev), gss, prev); }
+    { gs.add_segment(*prev, *(p.vertices_begin()), gso.edge_color(p, prev), gss, p.vertices_begin()); }
     else
-    { gs.add_segment(*prev, *(p.vertices_begin()), gss, prev); }
+    { gs.add_segment(*prev, *(p.vertices_begin()), gss, p.vertices_begin()); }
   }
 }
 

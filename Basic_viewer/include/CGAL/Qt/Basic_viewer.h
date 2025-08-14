@@ -23,8 +23,6 @@
 #include <string>
 #include <CGAL/Graphics_scene.h>
 
-#include <chrono> // ADDED
-
 #ifdef __GNUC__
 #if  __GNUC__ >= 9
 #  pragma GCC diagnostic push
@@ -837,19 +835,18 @@ public:
 
 public:
 template<typename GSSelector>
-  typename GSSelector::face_descriptor select_face(QMouseEvent* event, GSSelector gss) // ADDED
+  typename GSSelector::face_descriptor select_face(QMouseEvent* event, GSSelector gss, bool& found) // ADDED
   {
     //GSSelector::data_structure::Null_descriptor;
     // THIS IS FOR FACES
     this->makeCurrent();
-    auto start = std::chrono::high_resolution_clock::now();
     float minPtDepth = 1.0;
     float ptDepth;
     CGAL::qglviewer::Vec finalV1, finalV2, finalV3;
     CGAL::qglviewer::Vec v1, v2, v3;
     int id = 0;
     u_int finalId = UINT_MAX;
-    int faceId = -1;
+    u_int faceId = UINT_MAX;
     int nb_if = 0;
     float depth = 1.0f;
     //glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
@@ -904,21 +901,11 @@ template<typename GSSelector>
       }
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> duration = end - start;
-    std::cout << "Number of faces checked: " << nb_if << std::endl;
-    std::cout << "Face selection took: " << duration.count() << " ms" << std::endl;
-
-    if(faceId != -1)
-    {
-      std::cout << "Selected face ID: " << faceId << std::endl;
-    }
-
-    return gss.get_face_descriptor(faceId);
+    return gss.get_face_descriptor(faceId, found);
   }
 
 template<typename GSSelector>
-  typename GSSelector::edge_descriptor select_edge(QMouseEvent* event, GSSelector gss) // ADDED
+  typename GSSelector::edge_descriptor select_edge(QMouseEvent* event, GSSelector gss, bool& found) // ADDED
   {
     // THIS IS FOR SEGMENTS
     this->makeCurrent();
@@ -926,8 +913,9 @@ template<typename GSSelector>
     CGAL::qglviewer::Vec finalLineP, finalLineQ;
     u_int id = 0;
     u_int finalId = UINT_MAX;
-    float depth = 1.0f;
-    glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+
+    //float depth = 1.0f;
+    //glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
 
     // Precompute projection matrix
 
@@ -957,7 +945,7 @@ template<typename GSSelector>
       CGAL::qglviewer::Vec lineQ = camera()->projectedCoordinatesOf(CGAL::qglviewer::Vec(*(it+3), *(it+4), *(it+5)));
       CGAL::qglviewer::Vec point(event->position().x(), event->position().y(), 0);
       float avgDepth = (lineP.z + lineQ.z) / 2.0;
-      if(avgDepth < minAvgDepth && containsPoint(lineP, lineQ, point))
+      if(avgDepth < minAvgDepth && pointInLine(lineP, lineQ, point))
       {
         finalId = id;
         minAvgDepth = avgDepth;
@@ -966,10 +954,11 @@ template<typename GSSelector>
       }
     }
 
-    return gss.get_edge_descriptor(finalId);
+    return gss.get_edge_descriptor(finalId, found);
   }
+
 template<typename GSSelector>
-  typename GSSelector::vertex_descriptor select_vertex(QMouseEvent* event, GSSelector gss) // ADDED
+  typename GSSelector::vertex_descriptor select_vertex(QMouseEvent* event, GSSelector gss, bool& found) // ADDED
   {
     // THIS IS FOR POINTS
     this->makeCurrent();
@@ -977,8 +966,10 @@ template<typename GSSelector>
     u_int finalId = UINT_MAX;
     CGAL::qglviewer::Vec finalPoint = CGAL::qglviewer::Vec(0, 0, 0);
     CGAL::qglviewer::Vec finalVecScreen = CGAL::qglviewer::Vec(0, 0, 1);
-    float depth = 1.0f;
-    glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+    int tolerance = 5;
+
+    //float depth = 1.0f;
+    //glReadPixels(event->pos().x(), event->pos().y(), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
 
     // Precompute projection matrix
     /*GLint viewport[4];
@@ -1005,8 +996,8 @@ template<typename GSSelector>
     {
       CGAL::qglviewer::Vec point = CGAL::qglviewer::Vec(*(it), *(it+1), *(it+2));
       CGAL::qglviewer::Vec vecScreen = camera()->projectedCoordinatesOf(point);
-      if(event->position().x() > vecScreen.x - 5 && event->position().x() < vecScreen.x + 5 &&
-        event->position().y() > vecScreen.y - 5 && event->position().y() < vecScreen.y + 5 &&
+      if(event->position().x() > vecScreen.x - tolerance && event->position().x() < vecScreen.x + tolerance &&
+        event->position().y() > vecScreen.y - tolerance && event->position().y() < vecScreen.y + tolerance &&
         vecScreen.z < finalVecScreen.z)
       {
         finalVecScreen = vecScreen;
@@ -1015,7 +1006,7 @@ template<typename GSSelector>
       }
     }
 
-    return gss.get_vertex_descriptor(finalId);
+    return gss.get_vertex_descriptor(finalId, found);
   }
 
 protected:
@@ -1044,7 +1035,7 @@ protected:
     return CGAL::qglviewer::Vec(vs[0], viewport[3] - vs[1], vs[2]);
   }*/
 
-  bool containsPoint(CGAL::qglviewer::Vec lineP, CGAL::qglviewer::Vec lineQ, CGAL::qglviewer::Vec point) // ADDED
+  bool pointInLine(CGAL::qglviewer::Vec lineP, CGAL::qglviewer::Vec lineQ, CGAL::qglviewer::Vec point) // ADDED
   {
     bool xBetween = ((point.x - lineP.x) * (point.x - lineQ.x) <= 1);
     bool yBetween = ((point.y - lineP.y) * (point.y - lineQ.y) <= 1);
@@ -1055,7 +1046,7 @@ protected:
     float dyPQ = lineQ.y - lineP.y;
     float lineLengthSquared = dxPQ*dxPQ + dyPQ*dyPQ;
     float crossproduct = (point.y - lineP.y) * dxPQ - (point.x - lineP.x) * dyPQ;
-    float tolerance = 1;
+    float tolerance = 1.1;
     return crossproduct * crossproduct <= lineLengthSquared * tolerance * tolerance;
   }
 
@@ -1403,7 +1394,6 @@ protected:
     // 1) POINT SHADER
 
     vao[VAO_POINTS].bind();
-    std::cout << "Line 1134 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_POINTS);
     colors = m_scene.get_array_of_index(GS::COLOR_POINTS);
 
@@ -1423,7 +1413,6 @@ protected:
     // 2) SEGMENT SHADER
 
     vao[VAO_SEGMENTS].bind();
-    std::cout << "Line 1154 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_SEGMENTS);
     colors = m_scene.get_array_of_index(GS::COLOR_SEGMENTS);
 
@@ -1444,7 +1433,6 @@ protected:
     // 3) RAYS SHADER
 
     vao[VAO_RAYS].bind();
-    std::cout << "Line 1175 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_RAYS);
     colors = m_scene.get_array_of_index(GS::COLOR_RAYS);
 
@@ -1466,7 +1454,6 @@ protected:
     // 4) LINES SHADER
 
     vao[VAO_LINES].bind();
-    std::cout << "Line 1196 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_LINES);
     colors = m_scene.get_array_of_index(GS::COLOR_LINES);
 
@@ -1488,7 +1475,6 @@ protected:
     // 5) FACE SHADER
 
     vao[VAO_FACES].bind();
-    std::cout << "Line 1217 : " << glGetError() << std::endl; // ADDED
     positions = m_scene.get_array_of_index(GS::POS_FACES);
     normals = m_scene.get_array_of_index(
       m_flat_shading ? GS::FLAT_NORMAL_FACES : GS::SMOOTH_NORMAL_FACES
@@ -1525,7 +1511,6 @@ protected:
       rendering_program_clipping_plane.bind();
 
       vao[VAO_CLIPPING_PLANE].bind();
-      std::cout << "Line 1253 : " << glGetError() << std::endl; // ADDED
       ++bufn;
       CGAL_assertion(bufn < NB_GL_BUFFERS);
       buffers[bufn].bind();
@@ -1767,7 +1752,7 @@ protected:
                            Local_point(bbox.xmax(), bbox.ymax(), bbox.zmax())));
       // std::cout<<"Length of the diagonal: "<<d<<std::endl;
       m_size_vertices=1.5*d;
-      m_size_edges=d;
+      m_size_edges=1;
       m_size_rays=m_size_edges;
       m_size_lines=m_size_edges;
       m_size_normals=d/3;

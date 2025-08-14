@@ -49,8 +49,9 @@ int main(int argc, char* argv[])
         if(e->button() == Qt::LeftButton)
         {
           bool found = false;
-          VD::Face_iterator fh = basic_viewer->select_face(e, gss);
-          if(fh != VD::Face_iterator{})
+          bool selected = false;
+          VD::Face_iterator fh = basic_viewer->select_face(e, gss, selected);
+          if(selected)
           {
             if(!fh->is_unbounded())
             {
@@ -66,13 +67,9 @@ int main(int argc, char* argv[])
             }
           }
 
-          VD::Halfedge_iterator eh = basic_viewer->select_edge(e, gss);
-          VD::Halfedge_iterator bh = basic_viewer->select_edge(e, gss);
-          if(eh == bh)
+          VD::Halfedge_iterator eh = basic_viewer->select_edge(e, gss, selected);
+          if(selected)
           {
-            std::cout << "Iterator is segment: " << (eh->is_segment() ? "yes" : "no") << std::endl;
-            std::cout << "Has source: " << (eh->has_source() ? "yes" : "no") << std::endl;
-            std::cout << "Has target: " << (eh->has_target() ? "yes" : "no") << std::endl;
             if(eh->is_segment())
             {
               found = true;
@@ -81,8 +78,8 @@ int main(int argc, char* argv[])
             }
           }
 
-          VD::Vertex_iterator vh = basic_viewer->select_vertex(e, gss);
-          if(vh != VD::Vertex_iterator())
+          VD::Vertex_iterator vh = basic_viewer->select_vertex(e, gss, selected);
+          if(selected)
           {
             found = true;
             std::cout << "Vertex: " << vh->point() << std::endl;

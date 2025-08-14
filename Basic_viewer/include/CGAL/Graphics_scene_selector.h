@@ -45,30 +45,36 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
   template<class GSS, class descriptor>
   friend struct GSS_push;
 
-  vertex_descriptor get_vertex_descriptor(std::size_t index) const
+  vertex_descriptor get_vertex_descriptor(std::size_t index, bool& found) const
   {
     if (index >= m_vertices_index.size() || index < 0 || !enabled)
     {
+      found = false;
       return vertex_descriptor(); // Return an invalid descriptor
     }
+    found = true;
     return m_vertices_index.at(index);
   }
 
-  edge_descriptor get_edge_descriptor(std::size_t index) const
+  edge_descriptor get_edge_descriptor(std::size_t index, bool& found) const
   {
     if (index >= m_edges_index.size() || index < 0 || !enabled)
     {
+      found = false;
       return edge_descriptor(); // Return an invalid descriptor
     }
+    found = true;
     return m_edges_index.at(index);
   }
 
-  face_descriptor get_face_descriptor(std::size_t index) const
+  face_descriptor get_face_descriptor(std::size_t index, bool& found) const
   {
     if (index >= m_faces_index.size() || index < 0 || !enabled)
     {
+      found = false;
       return face_descriptor(); // Return an invalid descriptor
     }
+    found = true;
     return m_faces_index.at(index);
   }
 

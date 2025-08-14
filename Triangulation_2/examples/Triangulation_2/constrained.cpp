@@ -48,9 +48,9 @@ main( )
       if(e->button() == Qt::LeftButton)
       {
         bool found = false;
-        CDT::Finite_faces_iterator dh = basic_viewer->select_face(e, gs_selector);
-        auto invalid_face = CDT::Finite_faces_iterator();
-        if(dh != invalid_face)
+        bool selected = false;
+        CDT::Finite_faces_iterator dh = basic_viewer->select_face(e, gs_selector, selected);
+        if(selected)
         {
           std::cout << "Face : ";
           std::cout << dh->vertex(0)->point() << std::endl;
@@ -59,9 +59,8 @@ main( )
           found = true;
         }
 
-        CDT::Finite_edges_iterator eh = basic_viewer->select_edge(e, gs_selector);
-        auto invalid_edge = CDT::Finite_edges_iterator();
-        if(eh != invalid_edge)
+        CDT::Finite_edges_iterator eh = basic_viewer->select_edge(e, gs_selector, selected);
+        if(selected)
         {
           std::cout << "Edge : ";
           std::cout << eh->first->vertex(eh->first->cw(eh->second))->point() << std::endl;
@@ -69,9 +68,8 @@ main( )
           found = true;
         }
 
-        CDT::Vertex_handle vh = basic_viewer->select_vertex(e, gs_selector);
-        auto invalid_vertex = CDT::Vertex_handle();
-        if(vh != invalid_vertex)
+        CDT::Vertex_handle vh = basic_viewer->select_vertex(e, gs_selector, selected);
+        if(selected)
         {
           std::cout << "Vertex : ";
           std::cout << vh->point() << std::endl;

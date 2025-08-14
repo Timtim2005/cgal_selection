@@ -138,9 +138,9 @@ void compute_elements(const P2& p2,
        gso.draw_edge(p2, prev))
     { // Add edge with previous point
       if(gso.colored_edge(p2, prev))
-      { graphics_scene.add_segment(*prev, *i, gso.edge_color(p2, prev), gss, prev); }
+      { graphics_scene.add_segment(*prev, *i, gso.edge_color(p2, prev), gss, i); }
       else
-      { graphics_scene.add_segment(*prev, *i, gss, prev); }
+      { graphics_scene.add_segment(*prev, *i, gss, i); }
     }
 
     if(gso.are_faces_enabled())

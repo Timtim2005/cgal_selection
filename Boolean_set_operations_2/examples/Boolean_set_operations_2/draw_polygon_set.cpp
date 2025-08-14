@@ -55,25 +55,44 @@ int main()
   CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
   if(app)
   {
-    app.basic_viewer().on_mouse_pressed = [&gss, &S] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+    app.basic_viewer().on_mouse_pressed = [&gss, &S, &A, &B] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
     {
       if(e->button() == Qt::LeftButton)
       {
         bool found = false;
-        Polygon_2::Vertex_const_iterator vh = basic_viewer->select_vertex(e, gss);
-        if(vh != Polygon_2::Vertex_const_iterator{})
+        bool next = true;
+        bool selected = false;
+        Polygon_2::Vertex_const_iterator vh = basic_viewer->select_vertex(e, gss, selected);
+        if(selected)
         {
+          std::cout << "Vertex : ";
           std::cout << *vh << std::endl;
           found = true;
         }
 
-        Polygon_2::Vertex_const_iterator eh = basic_viewer->select_edge(e, gss);
-        if(eh != Polygon_2::Vertex_const_iterator{})
+        Polygon_2::Vertex_const_iterator eh = basic_viewer->select_edge(e, gss, selected);
+        if(selected)
         {
-          std::cout << *eh << std::endl;
-          --eh;
-          std::cout << *eh << std::endl;
-          found = true;
+          std::cout << "Edge : ";
+          std::vector<Polygon_with_holes_2> pwhs;
+          S.polygons_with_holes(std::back_inserter(pwhs));
+          for (const auto& pwh : pwhs)
+          {
+            if(!pwh.outer_boundary().is_empty() && eh == pwh.outer_boundary().vertices_begin())
+            {
+              std::cout << *eh << std::endl;
+              std::cout << *pwh.outer_boundary().vertices_end() << std::endl;
+              found = true;
+              bool next = false;
+            }
+          }
+          if(next)
+          {
+            std::cout << *eh << std::endl;
+            --eh;
+            std::cout << *eh << std::endl;
+            found = true;
+          }
         }
         return found;
       }

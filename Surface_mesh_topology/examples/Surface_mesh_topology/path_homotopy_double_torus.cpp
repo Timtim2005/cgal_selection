@@ -78,7 +78,8 @@ int main(int argc, char** argv)
         if(e->button() == Qt::LeftButton)
         {
           bool found = false;
-          LCC_3_cmap::Dart_const_handle fh = basic_viewer->select_face(e, gss);
+          bool selected = false;
+          LCC_3_cmap::Dart_const_handle fh = basic_viewer->select_face(e, gss, selected);
           if(fh != LCC_3_cmap::null_descriptor)
           {
             found = true;
@@ -91,9 +92,8 @@ int main(int argc, char** argv)
             } while (cur != fh);
             found = true;
           }
-
           
-          LCC_3_cmap::Dart_const_handle eh = basic_viewer->select_edge(e, gss);
+          LCC_3_cmap::Dart_const_handle eh = basic_viewer->select_edge(e, gss, selected);
           if(eh != LCC_3_cmap::null_descriptor)
           {
             LCC_3_cmap::Dart_const_handle cur = eh;
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
             found = true;
           }
 
-          LCC_3_cmap::Dart_const_handle vh = basic_viewer->select_vertex(e, gss);
+          LCC_3_cmap::Dart_const_handle vh = basic_viewer->select_vertex(e, gss, selected);
           if(vh != LCC_3_cmap::null_descriptor)
           {
             std::cout << "Vertex: ";

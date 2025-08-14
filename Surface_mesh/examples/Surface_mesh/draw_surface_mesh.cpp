@@ -55,14 +55,41 @@ int main(int argc, char* argv[])
     {
       if(e->button() == Qt::LeftButton)
       {
+        bool found = false;
+        bool selected = false;
         auto point_pmap = get(CGAL::vertex_point, sm);
-        Mesh::Vertex_index dh = basic_viewer->select_vertex(e, gss);
-        if(dh == Mesh::null_vertex())
-          return false;
+        Mesh::Face_index fh = basic_viewer->select_face(e, gss, selected);
+        if(selected)
+        {
+          auto hd = halfedge(fh, sm);
+          const auto first_hd = hd;
+          do
+          {
+            auto v = source(hd, sm);
+            std::cout << get(point_pmap, v) << std::endl;
+            hd = next(hd, sm);
+          }
+          while (hd != first_hd);
+          found = true;
+        }
 
-        std::cout << get(point_pmap, dh) << std::endl;
+        Mesh::Edge_index eh = basic_viewer->select_edge(e, gss, selected);
+        if(selected)
+        {
+          std::cout << get(point_pmap, source(halfedge(eh, sm), sm)) << " to "
+                    << get(point_pmap, target(halfedge(eh, sm), sm)) << std::endl;
+          found = true;
+        }
 
-        return true;
+
+        Mesh::Vertex_index vh = basic_viewer->select_vertex(e, gss, selected);
+        if(selected)
+        {
+          std::cout << get(point_pmap, vh) << std::endl;
+          found = true;
+        }
+
+        return found;
       }
       return false;
     };

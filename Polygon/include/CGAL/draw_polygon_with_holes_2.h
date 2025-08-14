@@ -106,12 +106,13 @@ namespace CGAL
 
 namespace draw_function_for_ph2_with_holes {
 
-template <class P2, class GSOptions>
+template <class P2, class GSOptions, class GSSelector>
 void compute_one_loop_elements(const P2& ap2,
                                const typename P2::General_polygon_2& aloop,
                                Graphics_scene &graphics_scene,
                                bool hole,
-                               const GSOptions& gs_options)
+                               const GSOptions& gs_options,
+                               GSSelector *gs_selector)
 {
   if (hole && gs_options.are_faces_enabled())
   { graphics_scene.add_point_in_face(aloop.vertex(aloop.size()-1)); }
@@ -124,18 +125,18 @@ void compute_one_loop_elements(const P2& ap2,
        gs_options.draw_vertex(ap2, i))
     { // Add vertex
       if(gs_options.colored_vertex(ap2, i))
-      { graphics_scene.add_point(*i, gs_options.vertex_color(ap2, i)); }
+      { graphics_scene.add_point(*i, gs_options.vertex_color(ap2, i), gs_selector, i); }
       else
-      { graphics_scene.add_point(*i); }
+      { graphics_scene.add_point(*i, gs_selector, i); }
     }
 
     if(i!=aloop.vertices_begin() &&
        gs_options.are_edges_enabled() && gs_options.draw_edge(ap2, prev))
     { // Add segment with previous point
       if(gs_options.colored_edge(ap2, prev))
-      { graphics_scene.add_segment(*prev, *i, gs_options.edge_color(ap2, prev)); }
+      { graphics_scene.add_segment(*prev, *i, gs_options.edge_color(ap2, prev), gs_selector, i); }
       else
-      { graphics_scene.add_segment(*prev, *i); }
+      { graphics_scene.add_segment(*prev, *i, gs_selector, i); }
     }
 
     if(gs_options.are_faces_enabled())
@@ -150,15 +151,15 @@ void compute_one_loop_elements(const P2& ap2,
   {
     if(gs_options.colored_edge(ap2, prev))
     { graphics_scene.add_segment(*prev, *(aloop.vertices_begin()),
-                                 gs_options.edge_color(ap2, prev)); }
+                                 gs_options.edge_color(ap2, prev), gs_selector, aloop.vertices_begin()); }
     else
-    { graphics_scene.add_segment(*prev, *(aloop.vertices_begin())); }
+    { graphics_scene.add_segment(*prev, *(aloop.vertices_begin()), gs_selector, aloop.vertices_begin()); }
   }
 }
 
-template <class P2, class GSOptions>
+template <class P2, class GSOptions, class GSSelector>
 void compute_elements(const P2& p2, Graphics_scene &graphics_scene,
-                      const GSOptions& gs_options)
+                      const GSOptions& gs_options, GSSelector *gs_selector)
 {
   if (p2.outer_boundary().is_empty()) return;
 
@@ -171,12 +172,12 @@ void compute_elements(const P2& p2, Graphics_scene &graphics_scene,
   }
 
   compute_one_loop_elements<P2>(p2, p2.outer_boundary(), graphics_scene,
-                                false, gs_options);
+                                false, gs_options, gs_selector);
 
   for (typename P2::Hole_const_iterator it=p2.holes_begin(); it!=p2.holes_end(); ++it)
   {
     compute_one_loop_elements<P2>(p2, *it, graphics_scene,
-                                  true, gs_options);
+                                  true, gs_options, gs_selector);
     if (gs_options.are_faces_enabled())
     { graphics_scene.add_point_in_face(p2.outer_boundary().vertex
                                        (p2.outer_boundary().size()-1));
@@ -191,15 +192,6 @@ void compute_elements(const P2& p2, Graphics_scene &graphics_scene,
 
 #define CGAL_P2_WITH_HOLES_TYPE CGAL::Polygon_with_holes_2<T, C>
 
-template <class T, class C, class GSOptions>
-void add_to_graphics_scene(const CGAL_P2_WITH_HOLES_TYPE& p2,
-                           CGAL::Graphics_scene& graphics_scene,
-                           const GSOptions &gs_options)
-{
-  draw_function_for_ph2_with_holes::compute_elements(p2, graphics_scene,
-                                                     gs_options);
-}
-
 template <class T, class C>
 void add_to_graphics_scene(const CGAL_P2_WITH_HOLES_TYPE& p2,
                            CGAL::Graphics_scene& graphics_scene)
@@ -209,7 +201,57 @@ void add_to_graphics_scene(const CGAL_P2_WITH_HOLES_TYPE& p2,
                   typename CGAL_P2_WITH_HOLES_TYPE::General_polygon_2::Vertex_const_iterator,
                   void*> gs_options;
 
-  add_to_graphics_scene(p2, graphics_scene, gs_options);
+  CGAL::Graphics_scene_selector<CGAL_P2_WITH_HOLES_TYPE,
+                   typename CGAL_P2_WITH_HOLES_TYPE::General_polygon_2::Vertex_const_iterator,
+                   typename CGAL_P2_WITH_HOLES_TYPE::General_polygon_2::Vertex_const_iterator,
+                   void*> gs_selector(false);
+
+  add_to_graphics_scene(p2, graphics_scene, gs_options, &gs_selector);
+}
+
+template <class T, class C, class GSOptions>
+void add_to_graphics_scene(const CGAL_P2_WITH_HOLES_TYPE& p2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions &gs_options)
+{
+  CGAL::Graphics_scene_selector<CGAL_P2_WITH_HOLES_TYPE,
+                   typename CGAL_P2_WITH_HOLES_TYPE::General_polygon_2::Vertex_const_iterator,
+                   typename CGAL_P2_WITH_HOLES_TYPE::General_polygon_2::Vertex_const_iterator,
+                   void*> gs_selector(false);
+
+  add_to_graphics_scene(p2, graphics_scene, gs_options, &gs_selector);
+}
+
+template <class T, class C, class GSSelector>
+void add_to_graphics_scene(const CGAL_P2_WITH_HOLES_TYPE& p2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           GSSelector *gs_selector)
+{
+  Graphics_scene_options<CGAL_P2_WITH_HOLES_TYPE,
+                  typename CGAL_P2_WITH_HOLES_TYPE::General_polygon_2::Vertex_const_iterator,
+                  typename CGAL_P2_WITH_HOLES_TYPE::General_polygon_2::Vertex_const_iterator,
+                  void*> gs_options;
+
+  add_to_graphics_scene(p2, graphics_scene, gs_options, gs_selector);
+}
+
+template <class T, class C, class GSOptions, class GSSelector>
+void add_to_graphics_scene(const CGAL_P2_WITH_HOLES_TYPE& p2,
+                           CGAL::Graphics_scene& graphics_scene,
+                           const GSOptions &gs_options,
+                           GSSelector *gs_selector)
+{
+  draw_function_for_ph2_with_holes::compute_elements(p2, graphics_scene,
+                                                     gs_options, gs_selector);
+}
+
+template<class T, class C>
+void draw(const CGAL_P2_WITH_HOLES_TYPE& ap2,
+          const char* title="Polygon with Holes Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(ap2, buffer);
+  draw_graphics_scene(buffer, title);
 }
 
 // Specialization of draw function.
@@ -222,12 +264,23 @@ void draw(const CGAL_P2_WITH_HOLES_TYPE& ap2, const GSOptions &gs_options,
   draw_graphics_scene(buffer, title);
 }
 
-template<class T, class C>
+template<class T, class C, class GSSelector>
 void draw(const CGAL_P2_WITH_HOLES_TYPE& ap2,
+          GSSelector *gs_selector,
           const char* title="Polygon with Holes Basic Viewer")
 {
   CGAL::Graphics_scene buffer;
-  add_to_graphics_scene(ap2, buffer);
+  add_to_graphics_scene(ap2, buffer, gs_selector);
+  draw_graphics_scene(buffer, title);
+}
+
+template<class T, class C, class GSOptions, class GSSelector>
+void draw(const CGAL_P2_WITH_HOLES_TYPE& ap2, const GSOptions &gs_options,
+          GSSelector *gs_selector,
+          const char* title="Polygon with Holes Basic Viewer")
+{
+  CGAL::Graphics_scene buffer;
+  add_to_graphics_scene(ap2, buffer, gs_options, gs_selector);
   draw_graphics_scene(buffer, title);
 }
 
