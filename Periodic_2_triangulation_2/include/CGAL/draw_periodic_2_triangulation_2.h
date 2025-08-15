@@ -141,7 +141,7 @@ void compute_domain(const P2T2& p2t2,
   Kernel::Iso_rectangle_2 orig_domain =  p2t2.domain();
   std::array<int, 2> covering_sheets = p2t2.number_of_sheets();
 
-  typename P2T2::Periodic_segment_iterator null_segment{};
+  typename P2T2::Periodic_segment_iterator null_segment;
 
   for(int i = 0; i < covering_sheets[0]; i++)
   {
@@ -154,10 +154,10 @@ void compute_domain(const P2T2& p2t2,
       Kernel::Point_2 p3(orig_domain.xmax(), orig_domain.ymin());
       Kernel::Point_2 p4((orig_domain.max)());
 
-      graphics_scene.add_segment(p1 + shift, p2 + shift, gs_options.domain_color(), gs_selector, null_segment);
-      graphics_scene.add_segment(p1 + shift, p3 + shift, gs_options.domain_color(), gs_selector, null_segment);
-      graphics_scene.add_segment(p2 + shift, p4 + shift, gs_options.domain_color(), gs_selector, null_segment);
-      graphics_scene.add_segment(p3 + shift, p4 + shift, gs_options.domain_color(), gs_selector, null_segment);
+      graphics_scene.add_segment(p1 + shift, p2 + shift, gs_options.domain_color());
+      graphics_scene.add_segment(p1 + shift, p3 + shift, gs_options.domain_color());
+      graphics_scene.add_segment(p2 + shift, p4 + shift, gs_options.domain_color());
+      graphics_scene.add_segment(p3 + shift, p4 + shift, gs_options.domain_color());
     }
   }
 }

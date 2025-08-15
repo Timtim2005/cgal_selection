@@ -41,9 +41,13 @@ int main (int argc, char** argv)
     {
       if(e->button() == Qt::LeftButton)
       {
-        int dh = basic_viewer->select_face(e, gss);
-        std::cout << dh << std::endl;
-        return true;
+        bool selected = false;
+        int dh = basic_viewer->select_face(e, gss, selected);
+        if (selected)
+        {
+          std::cout << dh << std::endl;
+          return true;
+        }
       }
       return false;
     };

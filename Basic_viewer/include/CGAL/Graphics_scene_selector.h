@@ -17,6 +17,9 @@
 #include <CGAL/IO/Color.h>
 #include <functional>
 
+#include <CGAL/Graphics_scene.h>
+
+
 namespace CGAL {
 
 template <typename DS,
@@ -42,8 +45,7 @@ struct Graphics_scene_selector<DS, VertexDescriptor, EdgeDescriptor, FaceDescrip
   Graphics_scene_selector() {}
   Graphics_scene_selector(bool enabled) : enabled(enabled) {}
 
-  template<class GSS, class descriptor>
-  friend struct GSS_push;
+  friend class Graphics_scene;
 
   vertex_descriptor get_vertex_descriptor(std::size_t index, bool& found) const
   {
@@ -109,34 +111,6 @@ protected:
   std::vector<edge_descriptor> m_edges_index;
   std::vector<face_descriptor> m_faces_index;
   bool enabled = true;
-};
-
-template<class GSSelector, class descriptor>
-struct GSS_push
-{
-  static void add_face(GSSelector* gss, const descriptor desc)
-  {
-    if(gss != nullptr && std::is_same<descriptor, typename GSSelector::face_descriptor>::value)
-    {
-      gss->add_face(desc);
-    }
-  }
-  
-  static void add_edge(GSSelector* gss, const descriptor desc)
-  {
-    if(gss != nullptr && std::is_same<descriptor, typename GSSelector::edge_descriptor>::value)
-    {
-      gss->add_edge(desc);
-    }
-  }
-
-  static void add_vertex(GSSelector* gss, const descriptor desc)
-  {
-    if(gss != nullptr && std::is_same<descriptor, typename GSSelector::vertex_descriptor>::value)
-    {
-      gss->add_vertex(desc);
-    }
-  }
 };
 
 } // End namespace CGAL

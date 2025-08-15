@@ -32,9 +32,10 @@ int main(int argc, char* argv[])
       if(e->button() == Qt::LeftButton)
       {
         bool found = false;
+        bool selected = false;
         auto point_pmap = get(CGAL::vertex_point, P);
-        boost::graph_traits<Polyhedron>::face_descriptor fh = basic_viewer->select_face(e, gss);
-        if(fh != boost::graph_traits<Polyhedron>::null_face())
+        boost::graph_traits<Polyhedron>::face_descriptor fh = basic_viewer->select_face(e, gss, selected);
+        if(selected)
         {
           std::cout << "Face vertices:" << std::endl;
           auto hd = fh->halfedge();
@@ -48,16 +49,16 @@ int main(int argc, char* argv[])
           found = true;
         }
 
-        boost::graph_traits<Polyhedron>::edge_descriptor eh = basic_viewer->select_edge(e, gss);
-        if(eh != boost::graph_traits<Polyhedron>::edge_descriptor())
+        boost::graph_traits<Polyhedron>::edge_descriptor eh = basic_viewer->select_edge(e, gss, selected);
+        if(selected)
         {
           std::cout << get(point_pmap, source(halfedge(eh, P), P)) << std::endl;
           std::cout << get(point_pmap, target(halfedge(eh, P), P)) << std::endl;
           found = true;
         }
 
-        boost::graph_traits<Polyhedron>::vertex_descriptor vh = basic_viewer->select_vertex(e, gss);
-        if(vh != boost::graph_traits<Polyhedron>::null_vertex())
+        boost::graph_traits<Polyhedron>::vertex_descriptor vh = basic_viewer->select_vertex(e, gss, selected);
+        if(selected)
         {
           std::cout << get(point_pmap, vh) << std::endl;
           found = true;

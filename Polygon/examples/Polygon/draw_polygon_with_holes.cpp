@@ -50,18 +50,20 @@ int main()
       if(e->button() == Qt::LeftButton)
       {
         std::cout << "Left button pressed" << std::endl;
+        bool selected = false;
         bool found = false;
-        Polygon_with_holes_2::General_polygon_2::Vertex_const_iterator eh = basic_viewer->select_edge(e, gss);
-        if(eh != Polygon_with_holes_2::General_polygon_2::Vertex_const_iterator())
+        Polygon_with_holes_2::General_polygon_2::Vertex_const_iterator eh = basic_viewer->select_edge(e, gss, selected);
+        if(selected)
         {
           std::cout << *eh << std::endl;
           found = true;
         }
-      
-        Polygon_with_holes_2::General_polygon_2::Vertex_const_iterator vh = basic_viewer->select_vertex(e, gss);
-        if(vh != Polygon_with_holes_2::General_polygon_2::Vertex_const_iterator())
+
+        Polygon_with_holes_2::General_polygon_2::Vertex_const_iterator vh = basic_viewer->select_vertex(e, gss, selected);
+        if(selected)
         {
           std::cout << *vh << std::endl;
+          //std::cout << *--vh << std::endl;
           found = true;
         }
 

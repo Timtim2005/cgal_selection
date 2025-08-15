@@ -21,7 +21,7 @@ int main()
   CGAL::Graphics_scene_selector<Polygon_2,
                                 Polygon_2::Vertex_const_iterator,
                                 Polygon_2::Vertex_const_iterator,
-                                void*, void> gss(true);
+                                void*> gss(true);
 
 
   CGAL::add_to_graphics_scene(p, gs, &gss);
@@ -36,16 +36,26 @@ int main()
       if(e->button() == Qt::LeftButton)
       {
         bool found = false;
-        Polygon_2::Vertex_const_iterator eh = basic_viewer->select_edge(e, gss);
-        if(eh != Polygon_2::Vertex_const_iterator())
+        bool selected = false;
+        Polygon_2::Vertex_const_iterator eh = basic_viewer->select_edge(e, gss, selected);
+        if(selected)
         {
-          std::cout << *eh << std::endl;
-          std::cout << *--eh << std::endl;
+          if(eh == p.vertices_begin())
+          {
+            std::cout << *eh << std::endl;
+            std::cout << *(p.vertices_end()-1) << std::endl;
+          }
+          else
+          {
+            std::cout << *eh << std::endl;
+            std::cout << *--eh << std::endl;
+          }
+          
           found = true;
         }
       
-        Polygon_2::Vertex_const_iterator vh = basic_viewer->select_vertex(e, gss);
-        if(vh != Polygon_2::Vertex_const_iterator())
+        Polygon_2::Vertex_const_iterator vh = basic_viewer->select_vertex(e, gss, selected);
+        if(selected)
         {
           std::cout << *vh << std::endl;
           found = true;

@@ -46,17 +46,36 @@ int main(int argc, char* argv[])
       {
         if(e->button() == Qt::LeftButton)
         {
-          
-          PDT::Periodic_triangle_iterator dh = basic_viewer->select_face(e, gss);
-          
-          if(dh == PDT::Periodic_triangle_iterator())
-            return false;
-          typename PDT::Triangle tri(T.triangle(*dh));
-          std::cout << tri[0] << std::endl;
-          std::cout << tri[1] << std::endl;
-          std::cout << tri[2] << std::endl;
+          bool selected = false;
+          bool found = false;
 
-          return true;
+          PDT::Periodic_triangle_iterator fh = basic_viewer->select_face(e, gss, selected);
+          if(selected)
+          {
+            typename PDT::Triangle tri(T.triangle(*fh));
+            std::cout << tri[0] << std::endl;
+            std::cout << tri[1] << std::endl;
+            std::cout << tri[2] << std::endl;
+            found = true;
+          }
+
+          PDT::Periodic_segment_iterator eh = basic_viewer->select_edge(e, gss, selected);
+          if(selected)
+          {
+            typename PDT::Segment seg(T.segment(*eh));
+            std::cout << seg[0] << std::endl;
+            std::cout << seg[1] << std::endl;
+            found = true;
+          }
+
+          PDT::Periodic_point_iterator vh = basic_viewer->select_vertex(e, gss, selected);
+          if(selected)
+          {
+            std::cout << T.point(*vh) << std::endl;
+            found = true;
+          }
+
+          return found;
         }
         return false;
       };

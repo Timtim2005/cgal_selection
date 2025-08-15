@@ -35,8 +35,9 @@ int main()
     {
       if(e->button() == Qt::LeftButton)
       {
-        LCC::Dart_const_handle dh = basic_viewer->select_face(e, gss);
-        if(dh == LCC::null_descriptor)
+        bool selected = false;
+        LCC::Dart_const_handle dh = basic_viewer->select_face(e, gss, selected);
+        if(!selected)
           return false;
         LCC::Dart_const_handle cur = dh;
         do

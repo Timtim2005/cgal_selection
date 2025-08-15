@@ -137,8 +137,7 @@ void add_to_graphics_scene(const Point_set_3<P, V>& apointset,
                                int, int> gs_options;
   CGAL::Graphics_scene_selector<Point_set_3<P, V>,
                                   typename Point_set_3<P, V>::Index,
-                                  int, int,
-                                  void> gs_selector(false);
+                                  int, int> gs_selector(false);
   add_to_graphics_scene(apointset, graphics_scene, gs_options, &gs_selector);
 }
 
@@ -149,8 +148,7 @@ void add_to_graphics_scene(const Point_set_3<P, V>& apointset,
 {
   CGAL::Graphics_scene_selector<Point_set_3<P, V>,
                                   typename Point_set_3<P, V>::Index,
-                                  int, int,
-                                  void> gs_selector(false);
+                                  int, int> gs_selector(false);
   add_to_graphics_scene(apointset, graphics_scene, gs_options, &gs_selector);
 }
 

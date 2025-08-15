@@ -45,10 +45,22 @@ int main(int argc, char *argv[])
     {
       if(e->button() == Qt::LeftButton)
       {
-        Nef_polyhedron::Vertex_const_handle dh = basic_viewer->select_vertex(e, gs_selector);
-        if(dh == Nef_polyhedron::Vertex_const_handle())
-          return false;
-        std::cout << dh->point() << std::endl;
+        bool selected = false;
+        bool found = false;
+        Nef_polyhedron::Halfedge_const_handle eh = basic_viewer->select_edge(e, gs_selector, selected);
+        if(selected)
+        {
+          std::cout << eh->source()->point() << ", " << eh->target()->point() << std::endl;
+          bool found = true;
+        }
+
+        Nef_polyhedron::Vertex_const_handle vh = basic_viewer->select_vertex(e, gs_selector, selected);
+        if(selected)
+        {
+          std::cout << vh->point() << std::endl;
+          bool found = true;
+        }
+        
 
         return true;
       }

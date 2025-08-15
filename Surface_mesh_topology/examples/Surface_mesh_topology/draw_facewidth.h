@@ -47,7 +47,50 @@ void draw_facewidth(const LCC& lcc,
   }
 
   Facewidth_graphics_scene_options<LCC> df(vertex_mark, face_mark);
-  CGAL::draw(lcc, df, "Face width");
+
+  CGAL::Graphics_scene gs;
+
+  CGAL::Graphics_scene_selector<LCC,
+                                typename LCC::Dart_const_descriptor,
+                                typename LCC::Dart_const_descriptor,
+                                typename LCC::Dart_const_descriptor> gss;
+
+  CGAL::add_to_graphics_scene(lcc, gs, df, &gss);
+
+  CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+  if(app)
+  {
+    app.basic_viewer().on_mouse_pressed = [&gss, &lcc] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+    {
+      if(e->button() == Qt::LeftButton)
+      {
+        bool selected = false;
+        typename LCC::Dart_const_handle dh = basic_viewer->select_face(e, gss, selected);
+        if(!selected)
+          return false;
+        typename LCC::Dart_const_handle cur = dh;
+        do
+        {
+          std::cout << lcc.point(cur) << std::endl;
+          cur = lcc.next(cur);
+        } while (cur != dh);
+
+        return true;
+        /*LCC::Dart_const_handle dh = basic_viewer->select_edge(e, gss);
+        if(dh == LCC::null_descriptor)
+          return false;
+        LCC::Dart_const_handle cur = dh;
+
+        std::cout << lcc.point(cur) << std::endl;
+        std::cout << lcc.point(lcc.other_extremity(cur)) << std::endl;
+
+        return true;*/
+      }
+      return false;
+    };
+
+    app.run();
+  }
 
   lcc.free_mark(vertex_mark);
   lcc.free_mark(face_mark);

@@ -29,7 +29,7 @@ void display_cycle_info(const LCC_3& lcc, const Path_on_surface& cycle)
 
 int main(int argc, char* argv[])
 {
-  std::string filename(argc==1?CGAL::data_file_path("meshes/3torus.off"):argv[1]);
+  std::string filename(argc==1?CGAL::data_file_path("meshes/3torus.off"):CGAL::data_file_path(argv[1]));
   bool draw=(argc<3?false:(std::string(argv[2])=="-draw"));
   LCC_3 lcc;
   if (!CGAL::load_off(lcc, filename.c_str())) // Load the off file.
@@ -51,7 +51,65 @@ int main(int argc, char* argv[])
   if (draw)
   {
     auto cycles={cycle1, cycle2};
-    CGAL::draw(lcc, cycles);
+
+    CGAL::Graphics_scene gs;
+    CGAL::Graphics_scene_selector<LCC_3,
+                                       LCC_3::Dart_const_handle,
+                                       LCC_3::Dart_const_handle,
+                                       LCC_3::Dart_const_handle> gss;
+
+    CGAL::add_to_graphics_scene(lcc, gs, &gss, cycles);
+
+    CGAL::Qt::QApplication_and_basic_viewer app(gs, "Small faces");
+    if(app)
+    {
+      app.basic_viewer().on_mouse_pressed = [&gss, &lcc] (QMouseEvent* e, CGAL::Qt::Basic_viewer* basic_viewer) -> bool
+      {
+        if(e->button() == Qt::LeftButton)
+        {
+          std::cout << "Face: ";
+          bool found = false;
+          bool selected = false;
+          LCC_3::Dart_const_handle fh = basic_viewer->select_face(e, gss, selected);
+          if(selected)
+          {
+            found = true;
+            LCC_3::Dart_const_handle cur = fh;
+            std::cout << "Face: ";
+            do
+            {
+              std::cout << lcc.point(cur) << std::endl;
+              cur = lcc.next(cur);
+            } while (cur != fh);
+            found = true;
+          }
+          
+          LCC_3::Dart_const_handle eh = basic_viewer->select_edge(e, gss, selected);
+          if(selected)
+          {
+            LCC_3::Dart_const_handle cur = eh;
+            std::cout << "Edge: ";
+
+            std::cout << lcc.point(cur) << std::endl;
+            std::cout << lcc.point(lcc.other_extremity(cur)) << std::endl;
+            found = true;
+          }
+
+          LCC_3::Dart_const_handle vh = basic_viewer->select_vertex(e, gss, selected);
+          if(selected)
+          {
+            std::cout << "Vertex: ";
+            std::cout << lcc.point(vh) << std::endl;
+            found = true;
+          }
+
+          return found;
+        }
+        return false;
+      };
+
+      app.run();
+    }
   }
 
   return EXIT_SUCCESS;

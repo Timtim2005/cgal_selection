@@ -80,7 +80,7 @@ int main(int argc, char** argv)
           bool found = false;
           bool selected = false;
           LCC_3_cmap::Dart_const_handle fh = basic_viewer->select_face(e, gss, selected);
-          if(fh != LCC_3_cmap::null_descriptor)
+          if(selected)
           {
             found = true;
             LCC_3_cmap::Dart_const_handle cur = fh;
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
           }
           
           LCC_3_cmap::Dart_const_handle eh = basic_viewer->select_edge(e, gss, selected);
-          if(eh != LCC_3_cmap::null_descriptor)
+          if(selected)
           {
             LCC_3_cmap::Dart_const_handle cur = eh;
             std::cout << "Edge: ";
@@ -105,7 +105,7 @@ int main(int argc, char** argv)
           }
 
           LCC_3_cmap::Dart_const_handle vh = basic_viewer->select_vertex(e, gss, selected);
-          if(vh != LCC_3_cmap::null_descriptor)
+          if(selected)
           {
             std::cout << "Vertex: ";
             std::cout << lcc.point(vh) << std::endl;

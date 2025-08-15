@@ -47,14 +47,24 @@ int main()
     {
       if(e->button() == Qt::LeftButton)
       {
-        Ss::Halfedge_const_handle dh = basic_viewer->select_edge(e, gs_selector);
-        if(dh == Ss::Halfedge_const_handle())
-          return false;
+        bool found = false;
+        bool selected = false;
+        Ss::Halfedge_const_handle eh = basic_viewer->select_edge(e, gs_selector, selected);
+        if(selected)
+        {
+          std::cout << eh->opposite()->vertex()->point() << std::endl;
+          std::cout << eh->vertex()->point() << std::endl;
+          bool found = true;
+        }
 
-        std::cout << dh->opposite()->vertex()->point() << std::endl;
-        std::cout << dh->vertex()->point() << std::endl;
+        Ss::Vertex_const_handle vh = basic_viewer->select_vertex(e, gs_selector, selected);
+        if(selected)
+        {
+          std::cout << vh->point() << std::endl;
+          found = true;
+        }
 
-        return true;
+        return found;
       }
       return false;
     };

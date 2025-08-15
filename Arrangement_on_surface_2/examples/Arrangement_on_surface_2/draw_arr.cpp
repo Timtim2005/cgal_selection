@@ -135,7 +135,9 @@ int main() {
     {
       if(e->button() == Qt::LeftButton)
       {
-        Arrangement_2::Vertex_const_handle dh = basic_viewer->select_vertex(e, gss);
+        bool found = false;
+        bool selected = false;
+        Arrangement_2::Vertex_const_handle dh = basic_viewer->select_vertex(e, gss, selected);
         if(dh == Arrangement_2::Vertex_const_handle())
           return false;
 
